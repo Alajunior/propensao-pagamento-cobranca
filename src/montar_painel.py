@@ -51,20 +51,27 @@ def _com_todas(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([df, df.assign(fase=TODAS)], ignore_index=True)
 
 
+def dia_util_seguinte(dias: pd.DatetimeIndex, datas: pd.Series) -> pd.Series:
+    """Primeiro dia útil do painel >= a data (evento de sábado/domingo cai na segunda, como na operação)."""
+    pos = dias.searchsorted(datas, side="left")
+    ok = datas.notna().to_numpy() & (pos < len(dias))
+    out = pd.Series(pd.NaT, index=datas.index, dtype="datetime64[ns]")
+    out[ok] = dias[pos[ok]]
+    return out
+
+
 def _diario(esc, bol, dias) -> dict:
     dias_ts = pd.DatetimeIndex(pd.to_datetime(dias))
     est = _com_todas(esc[["dia", "fase", "faixa", "valor_esperado"]].astype({"fase": str, "faixa": str}))
     g_est = est.groupby(["dia", "fase", "faixa"]).agg(n=("valor_esperado", "size"), er=("valor_esperado", "sum"))
     b = bol.astype({"fase": str, "faixa": str}).copy()
-    # o pago no caixa cai num dia que pode ser fim de semana: vai para o último dia útil do painel até ele
-    pos = dias_ts.searchsorted(b["dia_pago"], side="right") - 1
-    b["dia_caixa"] = pd.NaT
-    ok = b["dia_pago"].notna() & (pos >= 0)
-    b.loc[ok, "dia_caixa"] = dias_ts[pos[ok]]
-    b = _com_todas(b)
+    # a faixa vem da foto até a emissão; a contagem vai para o dia útil da emissão / do pagamento (fim de semana → segunda)
+    b["dia_painel"] = dia_util_seguinte(dias_ts, b["dia_emit"])
+    b["dia_caixa"] = dia_util_seguinte(dias_ts, b["dia_pago"])
+    b = _com_todas(b[b["dia_painel"].notna()])
     pago = b["dia_pago"].notna()
-    emit = b.groupby(["dia_foto", "fase", "faixa"]).agg(bol=("rs_emit", "size"), rs_emit=("rs_emit", "sum"))
-    coorte = b[pago].groupby(["dia_foto", "fase", "faixa"]).agg(pag=("rs_pago", "size"), rs=("rs_pago", "sum"))
+    emit = b.groupby(["dia_painel", "fase", "faixa"]).agg(bol=("rs_emit", "size"), rs_emit=("rs_emit", "sum"))
+    coorte = b[pago].groupby(["dia_painel", "fase", "faixa"]).agg(pag=("rs_pago", "size"), rs=("rs_pago", "sum"))
     caixa = b[b["dia_caixa"].notna()].groupby(["dia_caixa", "fase", "faixa"]).agg(pag=("rs_pago", "size"),
                                                                                   rs=("rs_pago", "sum"))
     for t in (emit, coorte, caixa):

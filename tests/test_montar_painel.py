@@ -45,3 +45,13 @@ def test_html_autocontido(dados):
     assert "const DADOS = {" in html and "fetch(" not in html and 'type="module"' not in html
     assert set(re.findall(r"https://[^\s\"'<>)]+", html)) <= {CHARTJS, FONTES, "https://fonts.googleapis.com"}
     assert len(html.encode("utf-8")) < 5 * 1024 * 1024
+
+
+def test_evento_de_fim_de_semana_vai_para_a_segunda():
+    import pandas as pd
+    from src.montar_painel import dia_util_seguinte
+    dias = pd.DatetimeIndex(pd.bdate_range("2026-11-20", "2026-11-30"))
+    datas = pd.Series(pd.to_datetime(["2026-11-21", "2026-11-23", None, "2026-12-01"]))
+    r = dia_util_seguinte(dias, datas)
+    assert r.iloc[0] == pd.Timestamp("2026-11-23") and r.iloc[1] == pd.Timestamp("2026-11-23")
+    assert pd.isna(r.iloc[2]) and pd.isna(r.iloc[3])   # vazio e depois do último dia ficam de fora

@@ -1,10 +1,899 @@
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Propensão a Pagamento</title>
+<title>Propensão a Pagamento · Acompanhamento</title>
+<meta name="description" content="Painel de um modelo de propensão a pagamento em cobrança (dados sintéticos): operação por faixa, fila por valor esperado, calibração, backtest de produção e escada de candidatos com gate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="__FONTES__">
 <script src="__CHARTJS__"></script>
-</head><body>
+<style>
+/* =================== temas (tokens) — mesma família visual do painel de Monitoramento =================== */
+body{
+  --bg:radial-gradient(1200px 640px at 82% -12%,#2b2620 0%,#171410 55%,#0d0b08 92%);
+  --text:#ece6da;--strong:#fff;--t2:#b8ae9c;--t3:#c9bfa8;--t4:#b3a68c;--axis:#9c927f;
+  --ac:#D4A72C;--ac2:#B98A3D;--acs:#f0dca0;--ac-at:#e8c468;--ac-cp:#ffc18a;
+  --acg:linear-gradient(135deg,#D4A72C,#B98A3D);--ac-rgb:212,167,44;--ac-anim:#D4A72C;--ac-anim-glow:rgba(212,167,44,.5);
+  --bd:rgba(212,167,44,.2);--bd-h:rgba(212,167,44,.25);--bd-i:rgba(212,167,44,.3);
+  --glass:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+  --kpi:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+  --cbox:rgba(255,255,255,.02);--inp:#1c1712;--sticky:#181410;--thead:#1e1810;--tot1:#241e14;
+  --stripe:rgba(255,255,255,.03);--hover:rgba(212,167,44,.10);
+  --pos:#5be59a;--neg:#ff6b81;--flat:#b8ae9c;--warn:#ff9f43;
+  --chart-c:#f0dca0;--chart-b:rgba(212,167,44,.14);
+  --p-dot:rgba(212,167,44,.9);--p-line:212,167,44;--p-mouse:185,138,61;
+  --fx-d:#5ec8ff;--fx-o:#f2b33d;--fx-p:#c3cede;--fx-b:#d98a52;
+  --scheme:dark;
+}
+body[data-theme="midnight"]{
+  --bg:radial-gradient(1200px 640px at 82% -12%,#0f2647 0%,#081729 55%,#040b16 92%);
+  --text:#dbe7fb;--t2:#9fb8d9;--t3:#bcd0ec;--t4:#9fb8d9;--axis:#7f97b8;
+  --ac:#ff7a59;--ac2:#3b5b8c;--acs:#ffd2c2;--ac-at:#e8c468;--ac-cp:#ffc18a;
+  --acg:linear-gradient(135deg,#ff9473,#ff7a59);--ac-rgb:255,122,89;--ac-anim:#ff9d80;--ac-anim-glow:rgba(255,122,89,.5);
+  --bd:rgba(59,91,140,.42);--bd-h:rgba(59,91,140,.6);--bd-i:rgba(59,91,140,.55);
+  --inp:#081729;--sticky:#050d1a;--thead:#0a1830;--tot1:#0f2040;--hover:rgba(59,91,140,.22);
+  --chart-c:#9fb8d9;--chart-b:rgba(59,91,140,.25);
+  --p-dot:rgba(255,122,89,.85);--p-line:59,91,140;--p-mouse:255,122,89;
+}
+body[data-theme="light"]{
+  --bg:linear-gradient(180deg,#EDE6D8 0%,#F6F2E8 100%);
+  --text:#23262b;--strong:#2e2a1e;--t2:#475569;--t3:#475569;--t4:#475569;--axis:#64748b;
+  --ac:#8a6a1f;--ac2:#B98A3D;--acs:#6b5518;--ac-at:#8a6a1f;--ac-cp:#9a5b00;
+  --acg:linear-gradient(135deg,#8a6a1f,#B98A3D);--ac-rgb:138,106,31;--ac-anim:#8a6a1f;--ac-anim-glow:rgba(138,106,31,.35);
+  --bd:#dbe4ee;--bd-h:#d6cfbf;--bd-i:#cbd5e1;
+  --glass:#fff;--kpi:linear-gradient(180deg,#fff,#f8fbff);--cbox:#f8fafc;--inp:#fff;
+  --sticky:#fff;--thead:#2e2a1e;--tot1:#eef1f6;--stripe:#f8fafc;--hover:#F3ECD9;
+  --pos:#166534;--neg:#991b1b;--flat:#94a3b8;
+  --chart-c:#334155;--chart-b:rgba(15,23,42,.08);
+  --p-dot:rgba(139,106,31,.55);--p-line:139,106,31;--p-mouse:185,138,61;
+  --fx-d:#0b78c2;--fx-o:#a87508;--fx-p:#5f6f86;--fx-b:#a3501c;--scheme:light;
+}
+/* =================== base =================== */
+*{box-sizing:border-box}
+html{color-scheme:var(--scheme)}
+body{margin:0;padding:22px;min-height:100vh;background:var(--bg);background-attachment:fixed;color:var(--text);
+  font:14px/1.45 Inter,'Segoe UI',Arial,sans-serif}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.wrap{max-width:1560px;margin:0 auto;position:relative;z-index:1}
+b,strong{font-weight:700}
+.muted{color:var(--t2);font-size:12.5px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--bd-h)}
+h1{font:800 clamp(18px,2.2vw,28px)/1.15 Sora,Inter,sans-serif;margin:0;color:var(--strong)}
+h1 span{color:var(--ac)}
+.sub{font-size:13px;color:var(--t2);margin-top:3px}
+.sp{flex:1}
+.badge{font:700 11.5px Inter;color:var(--t3);border:1px solid var(--bd-i);background:rgba(255,255,255,.04);border-radius:30px;padding:6px 12px;white-space:nowrap}
+body[data-theme="light"] .badge{background:#fff}
+.pill{border-radius:10px;padding:7px 13px;background:linear-gradient(135deg,#241e14,#6b5518);box-shadow:0 0 22px rgba(185,138,61,.45);
+  font:800 10px Inter;letter-spacing:.08em;text-transform:uppercase;color:#f0dca0;text-align:center;line-height:1.35}
+body[data-theme="midnight"] .pill{background:linear-gradient(135deg,#0a1830,#3b5b8c);box-shadow:0 0 22px rgba(59,91,140,.55);color:#dbe7fb}
+body[data-theme="light"] .pill{background:linear-gradient(135deg,#2e2a1e,#6b5518);box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.seg{display:inline-flex;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--bd-i);border-radius:30px;padding:4px;gap:3px;flex-wrap:wrap}
+body[data-theme="light"] .seg{background:#fff}
+.seg>b{font-size:11px;color:var(--t2);padding:6px 10px}
+.seg button{border:0;background:transparent;color:var(--t3);font:700 12px Inter;padding:7px 15px;border-radius:24px;cursor:pointer;transition:.2s}
+.seg button.on{background:var(--acg);color:#04121f}
+body[data-theme="light"] .seg button.on{color:#fff}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.tabs button{border:1px solid var(--bd-i);background:rgba(255,255,255,.04);color:var(--t3);font:700 13px Inter;padding:10px 20px;border-radius:30px;cursor:pointer;transition:.2s}
+.tabs button.on{background:var(--acg);border-color:transparent;color:#fff;box-shadow:0 8px 20px rgba(var(--ac-rgb),.35)}
+body[data-theme="midnight"] .tabs button.on{color:#04121f}
+body[data-theme="light"] .tabs button{background:#fff;color:#475569}
+body[data-theme="light"] .tabs button.on{color:#fff;background:var(--acg)}
+.glass{background:var(--glass);border:1px solid var(--bd);border-radius:16px;padding:18px;margin-bottom:16px;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 12px 30px rgba(0,0,0,.32)}
+body[data-theme="light"] .glass{box-shadow:0 2px 10px rgba(15,23,42,.06)}
+.ctitle{font:700 15px Sora,Inter,sans-serif;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;color:var(--strong)}
+.ctitle .muted{font:400 12.5px Inter}
+.hbtn{margin-left:auto;border:1px solid var(--bd-i);background:rgba(255,255,255,.04);color:var(--t2);border-radius:8px;padding:3px 10px;font:700 11.5px Inter;cursor:pointer}
+body[data-theme="light"] .hbtn{background:#fff}
+.hbtn.on{color:var(--ac);border-color:rgba(var(--ac-rgb),.6)}
+.help{display:none;font-size:12.5px;line-height:1.55;color:var(--t4);background:rgba(var(--ac-rgb),.07);border-left:3px solid rgba(var(--ac-rgb),.55);
+  border-radius:0 8px 8px 0;padding:9px 13px;margin:0 0 12px;max-width:120ch}
+.help.on{display:block}
+.help b{color:var(--acs)}
+body[data-theme="light"] .help{background:#f1f5f9;border-left-color:#8a6a1f}
+.note{font-size:12.5px;color:var(--t3);background:rgba(var(--ac-rgb),.06);border:1px dashed rgba(var(--ac-rgb),.4);border-radius:10px;padding:8px 12px;margin:10px 0 0}
+.note b{color:var(--strong)}
+.linha{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.cmdbar{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;padding:12px 16px}
+.lb{font:800 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+select{font:13px Inter;color:var(--text);background:var(--inp);border:1px solid var(--bd-i);border-radius:9px;padding:7px 10px;min-width:120px;max-width:100%}
+.preset{font:700 12px Inter;padding:6px 13px;border-radius:30px;background:rgba(var(--ac-rgb),.1);border:1px solid rgba(var(--ac-rgb),.3);color:var(--acs);cursor:pointer;transition:.2s}
+.preset:hover{background:rgba(var(--ac-rgb),.2)}
+body[data-theme="light"] .preset{background:#f1f5f9;color:#334155;border-color:#cbd5e1}
+.ab{font:800 11px Inter;letter-spacing:.06em;text-transform:uppercase}
+.ab.a{color:var(--ac-at)} .ab.c{color:var(--ac-cp)}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--kpi);border:1px solid var(--bd);border-left:4px solid var(--flat);border-radius:14px;padding:14px 15px;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);min-width:0}
+.kpi .h{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.kpi .l{font:700 10.5px Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--t2)}
+.kpi .bdg{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;flex:none}
+.kpi .v{font:800 22px Sora,Inter;margin-top:5px;color:var(--strong);transition:color .2s;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpi .v.animating{color:var(--ac-anim);text-shadow:0 0 12px var(--ac-anim-glow)}
+.kpi .dl{font:700 11.5px 'JetBrains Mono',monospace;margin-top:3px}
+.kpi.up{border-left-color:var(--pos);animation:kpiGlow 2.8s ease-in-out infinite}
+.kpi.down{border-left-color:var(--neg)}
+.kpi.up .bdg{background:rgba(91,229,154,.18);color:var(--pos);box-shadow:0 0 10px rgba(91,229,154,.35)}
+.kpi.down .bdg{background:rgba(255,107,129,.18);color:var(--neg);box-shadow:0 0 10px rgba(255,107,129,.35)}
+.kpi.flat .bdg,.kpi.nd .bdg{background:rgba(154,147,200,.16);color:var(--flat)}
+.up-t{color:var(--pos)} .down-t{color:var(--neg)} .flat-t,.nd-t{color:var(--flat)} .warn-t{color:var(--warn)}
+@keyframes kpiGlow{0%,100%{box-shadow:0 0 0 1px rgba(91,229,154,.20),0 0 10px rgba(91,229,154,.12)}50%{box-shadow:0 0 0 1px rgba(91,229,154,.34),0 0 20px rgba(91,229,154,.28)}}
+@keyframes kpiGlowLight{0%,100%{box-shadow:0 0 0 1px rgba(22,163,74,.16),0 0 8px rgba(22,163,74,.10)}50%{box-shadow:0 0 0 1px rgba(22,163,74,.30),0 0 16px rgba(22,163,74,.22)}}
+body[data-theme="light"] .kpi{border-color:#e7eef7;border-left-width:5px}
+body[data-theme="light"] .kpi.up{border-left-color:#16a34a;animation-name:kpiGlowLight}
+body[data-theme="light"] .kpi.down{border-left-color:#dc2626}
+body[data-theme="light"] .kpi.up .bdg{background:#dcfce7;color:#166534;box-shadow:none}
+body[data-theme="light"] .kpi.down .bdg{background:#fee2e2;color:#991b1b;box-shadow:none}
+/* chips de faixa */
+.chip{display:inline-flex;align-items:center;gap:7px;font:700 12px Inter;padding:5px 12px;border-radius:30px;border:1px solid var(--bd-i);
+  background:rgba(255,255,255,.04);color:var(--t3);cursor:pointer;transition:.18s}
+body[data-theme="light"] .chip{background:#fff}
+.chip i{width:9px;height:9px;border-radius:50%}
+.chip.off{opacity:.4;text-decoration:line-through}
+.chip.on{border-color:rgba(var(--ac-rgb),.75);color:var(--strong)}
+/* tabelas */
+.tblwrap{overflow:auto;max-height:520px;border-radius:10px;border:1px solid var(--bd)}
+table.t{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+.t th,.t td{padding:8px 9px;text-align:right;white-space:nowrap}
+.t th{position:sticky;top:0;z-index:2;background:var(--thead);font:700 10.5px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
+body[data-theme="light"] .t th{color:#fff}
+.t th:first-child,.t td:first-child{position:sticky;left:0;text-align:left;background:var(--sticky);z-index:1}
+.t th:first-child{z-index:3;background:var(--thead)}
+.t tbody tr:nth-child(even) td{background-image:linear-gradient(var(--stripe),var(--stripe))}
+.t tbody tr:hover td{background-image:linear-gradient(var(--hover),var(--hover))}
+.t tr.tot td{font-weight:800;border-top:2px solid rgba(var(--ac-rgb),.4);background-image:linear-gradient(rgba(var(--ac-rgb),.10),rgba(var(--ac-rgb),.10))}
+.t tr.tot td:first-child{background:var(--tot1)}
+.t tr.sel td{background-image:linear-gradient(rgba(var(--ac-rgb),.16),rgba(var(--ac-rgb),.16))}
+.dlt{display:block;font:700 10.5px 'JetBrains Mono',monospace;margin-top:1px}
+.bv{display:block;font-size:10.5px;color:var(--ac-cp)}
+.t td.tx,.t th.tx{text-align:left}
+.fxn{display:inline-flex;align-items:center;gap:7px;font-weight:700}
+.fxn i{width:10px;height:10px;border-radius:3px}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font:800 11px Inter;letter-spacing:.03em}
+.tag.perfeita{background:rgba(91,229,154,.16);color:var(--pos);border:1px solid rgba(91,229,154,.45)}
+.tag.fraca{background:rgba(255,159,67,.14);color:var(--warn);border:1px solid rgba(255,159,67,.45)}
+.tag.INVERTIDA{background:rgba(255,107,129,.18);color:var(--neg);border:1px solid rgba(255,107,129,.6)}
+.tag.semdados{background:rgba(154,147,200,.12);color:var(--flat);border:1px solid rgba(154,147,200,.35)}
+body[data-theme="light"] .tag.fraca{color:#9a4b00}
+td.ruim{color:var(--neg);font-weight:800}
+/* gráficos e grades */
+.chart{position:relative;width:100%;height:300px}
+.chart.h340{height:340px} .chart.h260{height:260px} .chart.h240{height:240px}
+.g2{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}
+.g2e{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.g2>*,.g2e>*{min-width:0}
+.g2>.glass,.g2e>.glass{margin-bottom:16px}
+/* simulador */
+input[type=range]{width:100%;accent-color:var(--ac)}
+.simg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.simg .b,.pcard,.tile{background:rgba(255,255,255,.045);border:1px solid var(--bd);border-radius:12px;padding:11px 13px;min-width:0}
+body[data-theme="light"] .simg .b,body[data-theme="light"] .pcard,body[data-theme="light"] .tile{background:#fff}
+.simg .v,.tile .tv{font:800 21px/1.15 Sora;color:var(--strong)}
+.simg .l,.tile .ts,.pcard .ps{font-size:12px;color:var(--t2)}
+.tile .tl,.pcard .pk{font:800 10.5px Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--t2);margin-bottom:3px}
+.pcard .pv{font:800 17px Sora;color:var(--strong)}
+.pgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px;margin:4px 0 14px}
+.tile .tv small{font:700 13px Inter;color:var(--t2)}
+.seta{color:var(--t2);font-weight:700}
+/* escada */
+.escada{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:10px;align-items:stretch}
+.degrau{background:rgba(255,255,255,.045);border:1px solid var(--bd);border-radius:14px;padding:13px 15px}
+body[data-theme="light"] .degrau{background:#fff}
+.degrau.venc{border-color:var(--pos);box-shadow:0 0 0 1px var(--pos) inset,0 0 22px rgba(91,229,154,.18)}
+.degrau .dn{font:800 15px Sora;color:var(--strong)}
+.degrau .dd{font-size:12px;color:var(--t2);margin:2px 0 8px}
+.degrau .dv{font:800 22px Sora;color:var(--strong)}
+.gatebox{display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:150px;font-size:11.5px}
+.gatebox .gt{font:800 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);text-align:center}
+.crit{display:flex;gap:6px;align-items:flex-start;line-height:1.35}
+.crit .ok{color:var(--pos);font-weight:800}.crit .no{color:var(--neg);font-weight:800}
+.veredito{margin-top:14px;padding:11px 14px;border-left:3px solid var(--pos);background:rgba(91,229,154,.08);border-radius:0 8px 8px 0;font-size:14px}
+.veredito.no{border-left-color:var(--warn);background:rgba(255,159,67,.08)}
+footer{margin-top:24px;padding-top:14px;border-top:1px solid rgba(var(--ac-rgb),.18);text-align:center;font:600 12px 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--t2)}
+.oculto{display:none!important}
+/* responsivo */
+@media(max-width:1400px){.kpis{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:1100px){.escada{grid-template-columns:1fr}.gatebox{min-width:0;padding:4px 6px}.gatebox .gt{text-align:left}}
+@media(max-width:980px){.g2,.g2e{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){body{padding:12px}.simg{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi .v{font-size:18px}.tabs button{padding:9px 14px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){.kpi.up{animation:none;box-shadow:0 0 0 1px rgba(91,229,154,.25),0 0 14px rgba(91,229,154,.20)}}
+</style>
+</head>
+<body data-theme="midnight">
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Propensão <span>a Pagamento</span> · Acompanhamento</h1>
+    <div class="sub" id="sub"></div>
+  </div>
+  <div class="sp"></div>
+  <span class="badge" id="bFoto"></span><span class="badge" id="bGer"></span>
+  <div class="pill">Projeto de portfólio<br>dados sintéticos</div>
+  <div class="seg" id="segTema" role="group" aria-label="Tema"><b>Versão</b>
+    <button data-tema="midnight">Midnight</button><button data-tema="dark">Dark</button><button data-tema="light">Light</button></div>
+</header>
+
+<div class="glass cmdbar">
+  <span class="lb">Fase (atraso)</span><select id="faseSel" aria-label="Fase"></select>
+  <span class="muted" id="faseNote"></span>
+</div>
+
+<div class="tabs" role="tablist">
+  <button role="tab" data-aba="oper" class="on">📋 Operação &amp; Acompanhamento</button>
+  <button role="tab" data-aba="qual">🔬 Qualidade do Modelo</button>
+</div>
+
+<!-- ============================ OPERAÇÃO ============================ -->
+<section id="v-oper">
+  <div class="glass">
+    <div class="ctitle">🗓 Período em análise <span class="muted">comanda os indicadores e todos os cards desta aba</span>
+      <button class="hbtn" data-h="h-per">ⓘ ajuda</button></div>
+    <div class="help" id="h-per"><b>O que é:</b> o período <b style="color:var(--ac-at)">A</b> (em análise) e o período
+      <b style="color:var(--ac-cp)">B</b> (comparação). <b>Como ler:</b> Δ é a variação de A contra B. Estoque e recuperação
+      esperada são <b>médias por dia</b> (é o mesmo estoque fotografado todo dia); boletos e pagamentos são <b>somas</b>.
+      <b>Atenção:</b> um dia isolado tem poucos boletos por faixa — por isso o painel abre comparando semana contra semana.</div>
+    <div class="linha"><div class="seg" id="segModo"><b>Comparar</b><button data-modo="dia">Dia × Dia</button><button data-modo="per">Período × Período</button><button data-modo="uni">Período único</button></div></div>
+    <div class="linha" id="ctlDia"><span class="ab a">Dia A</span><select id="dA"></select><span class="ab c">Dia B</span><select id="dB"></select>
+      <button class="preset" data-pd="d1">B = dia útil anterior</button><button class="preset" data-pd="d7">B = A − 7 dias</button><button class="preset" data-pd="m1">B = A − 1 mês</button></div>
+    <div class="linha" id="ctlPer"><span class="ab a">A</span><select id="pA1"></select><span>–</span><select id="pA2"></select>
+      <span class="ab c">B</span><select id="pB1"></select><span>–</span><select id="pB2"></select>
+      <button class="preset" data-pp="sem">Semana × anterior</button><button class="preset" data-pp="mes">Mês × anterior</button></div>
+    <div class="linha" id="ctlUni"><span class="ab a">Período</span><select id="u1"></select><span>–</span><select id="u2"></select>
+      <button class="preset" data-pu="7">Últimos 7 dias</button><button class="preset" data-pu="mes">Mês vigente</button><button class="preset" data-pu="tudo">Tudo</button></div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="glass" id="cardFunil">
+    <div class="ctitle">🔀 Funil por faixa <span class="muted" id="funSub"></span><button class="hbtn" data-h="h-fun">ⓘ ajuda</button></div>
+    <div class="help" id="h-fun"><b>O que é:</b> o funil de cada faixa — contratos (média diária do estoque), boletos emitidos
+      (cada parcela de acordo é um boleto), boletos pagos e os valores. <b>Conv. qtd</b> = pagos ÷ boletos; <b>Conv. valor</b> =
+      R$ pago ÷ R$ emitido; <b>Pagos / 1.000 contratos</b> = pagos ÷ contratos médios × 1.000; <b>Lift</b> = esse número na faixa
+      ÷ o do total. <b>Pagos destes boletos</b> segue cada boleto emitido no período até o pagamento (é a base da conversão);
+      <b>pagos no caixa</b> conta o que entrou no período, inclusive de boletos antigos. <b>Atenção:</b> a contagem de pagos cresce com o tamanho da faixa (Bronze tem 4× o estoque do Diamante):
+      compare faixas por <b>pagos / 1.000</b> e <b>lift</b>, não pela contagem. Δ em cinza = menos de 30 boletos na célula (n pequeno).</div>
+    <div class="linha"><div class="seg" id="segFun"><button data-fv="tab" class="on">📋 Tabela</button><button data-fv="graf">📊 Gráfico e funil</button></div></div>
+    <div class="tblwrap" id="funTab"><table class="t" id="tFun"></table></div>
+    <div class="note oculto" id="funNote">⏳ Os boletos emitidos nos últimos ~8 dias ainda não venceram (vencem 5 dias depois da
+      emissão): a conversão do período A ainda vai subir. Por isso a variação dessas colunas aparece como "em maturação". Para comparar conversão, use períodos que terminam há mais de 10 dias (ex.: Mês × anterior em outubro).</div>
+    <div id="funGraf" class="oculto"><div class="g2e"><div class="chart"><canvas id="chFun1"></canvas></div><div class="chart"><canvas id="chFun2"></canvas></div></div></div>
+  </div>
+
+  <div class="glass" id="cardTend">
+    <div class="ctitle">📊 Tendência diária — boletos × pagos <button class="hbtn" data-h="h-tend">ⓘ ajuda</button></div>
+    <div class="help" id="h-tend"><b>O que é:</b> por dia, as <b>barras empilhadas</b> mostram os boletos emitidos em cada faixa
+      e as <b>linhas</b> (mesma cor) os pagos. <b>Como ler:</b> <b>Caixa do dia</b> conta o pagamento na data em que caiu;
+      <b>Coorte do boleto</b> devolve o pago para o dia em que o boleto foi emitido (por isso os últimos dias ficam baixos:
+      os boletos ainda não venceram). Em "Caixa" a linha pode passar da barra num dia isolado — são boletos de dias diferentes.
+      Mostra o período A e os 30 dias úteis anteriores. Clique nas faixas para focar.</div>
+    <div class="linha">
+      <div class="seg" id="segTm"><button data-tm="dia" class="on">Diário</button><button data-tm="acum">Acumulado no mês</button></div>
+      <div class="seg" id="segTu"><button data-tu="qtd" class="on">Quantidade</button><button data-tu="rs">R$</button></div>
+      <div class="seg" id="segTa"><button data-ta="caixa" class="on">Pago: caixa do dia</button><button data-ta="coorte">Pago: coorte do boleto</button></div>
+    </div>
+    <div class="linha" id="tendChips"></div>
+    <div class="chart h340"><canvas id="chTend"></canvas></div>
+  </div>
+
+  <div class="glass" id="cardFx">
+    <div class="ctitle">🏷 Desempenho por faixa <span class="muted" id="fxSub"></span><button class="hbtn" data-h="h-fx">ⓘ ajuda</button></div>
+    <div class="help" id="h-fx"><b>Como ler:</b> cada linha é uma faixa no período A; abaixo do valor, a variação e o valor do
+      período B (laranja). <b>Chance média</b> é a probabilidade calibrada de pagar em 30 dias. <b>% da recuperação esperada</b>
+      mostra quanto do R$ esperado mora em cada faixa: o Diamante tem 10% do estoque e muito mais que 10% do R$ esperado.
+      <b>Lift</b> = pagos por contrato da faixa ÷ os do total da fase escolhida.</div>
+    <div class="tblwrap"><table class="t" id="tFx"></table></div>
+  </div>
+
+  <div class="g2">
+    <div class="glass" id="cardConc">
+      <div class="ctitle">🎯 Concentração &amp; simulador <button class="hbtn" data-h="h-sim">ⓘ ajuda</button></div>
+      <div class="help" id="h-sim"><b>O que é:</b> quanto da recuperação esperada se captura acionando os primeiros X% do estoque,
+        na ordem do <b>valor esperado</b> (chance calibrada × ticket típico). Tracejado = último dia do período B. Nos dias
+        maduros (com 30 dias de futuro), a linha verde mostra o que <b>de fato</b> foi pago nessa mesma ordem — se o dia A ainda
+        não tem 30 dias de futuro, ela vem do último dia maduro.
+        <b>Como usar:</b> arraste o controle até a capacidade da operação. <b>Atenção:</b> o dado é sintético e o pagamento não
+        depende de quem foi acionado: o simulador mede a <b>qualidade da ordem</b>, não o efeito do contato.</div>
+      <div class="chart h260"><canvas id="chConc"></canvas></div>
+      <label class="muted" for="sim">Acionar os primeiros <b id="simPct"></b> do estoque do dia <b id="simDia"></b></label>
+      <input type="range" id="sim" min="0.5" max="40" step="0.5" value="10">
+      <div class="simg">
+        <div class="b"><div class="v" id="simRec"></div><div class="l">da recuperação esperada</div></div>
+        <div class="b"><div class="v" id="simN"></div><div class="l">contratos acionados</div></div>
+        <div class="b"><div class="v" id="simFora"></div><div class="l">da base fica de fora</div></div>
+      </div>
+      <div id="filasCmp"></div>
+    </div>
+    <div class="glass" id="cardPerf">
+      <div class="ctitle">🧬 Perfil da faixa <button class="hbtn" data-h="h-perf">ⓘ ajuda</button></div>
+      <div class="help" id="h-perf"><b>Como ler:</b> a composição da faixa escolhida no último dia do período A: mix de produto,
+        atraso e dívida medianos, quanto teve contato com a pessoa certa nos últimos 30 dias e a chance média calibrada.
+        Serve para a operação entender <b>quem</b> está em cada faixa.</div>
+      <div class="linha" id="perfBtns"></div>
+      <div class="chart h240"><canvas id="chPerf"></canvas></div>
+      <div class="pgrid" id="perfNum"></div>
+    </div>
+  </div>
+
+  <div class="glass" id="cardFila">
+    <div class="ctitle">📄 Detalhamento de contratos <span class="muted">fila por valor esperado</span><button class="hbtn" data-h="h-fila">ⓘ ajuda</button></div>
+    <div class="help" id="h-fila"><b>O que é:</b> o topo do estoque do dia, ordenado por <b>valor esperado</b> (# 1 = primeiro a
+      acionar). <b>Só os 5 últimos dias úteis têm fila</b>: é a única tabela por contrato do painel, e guardá-la para o período
+      inteiro faria o arquivo crescer sem limite. A faixa vem da chance; a fila, do valor — por isso um Ouro com dívida grande
+      pode aparecer antes de um Diamante.</div>
+    <div class="linha"><div class="seg" id="filaDias"></div><input id="busca" placeholder="Buscar contrato…" aria-label="Buscar contrato"
+      style="font:13px Inter;color:var(--text);background:var(--inp);border:1px solid var(--bd-i);border-radius:9px;padding:7px 10px;min-width:180px"></div>
+    <div class="tblwrap" style="max-height:420px"><table class="t" id="tFila"></table></div>
+  </div>
+</section>
+
+<!-- ============================ QUALIDADE ============================ -->
+<section id="v-qual" class="oculto">
+  <div class="glass" id="cardBt">
+    <div class="ctitle">🔬 Backtest de produção, por fase <button class="hbtn" data-h="h-bt">ⓘ ajuda</button></div>
+    <div class="help" id="h-bt"><b>O que é:</b> não é métrica de treino. É a faixa que o modelo <b>publicou</b> em cada dia,
+      confrontada com o pagamento que de fato veio nos 30 dias seguintes (só dias maduros). <b>Ordenação:</b>
+      <i>perfeita</i> = Diamante ≥ Ouro ≥ Prata ≥ Bronze com lift relevante; <i>fraca</i> = na ordem, com lift baixo (&lt; 1,10);
+      <b><i>INVERTIDA</i></b> = uma faixa inferior paga mais que uma superior — pior que não ranquear, porque dá falsa confiança;
+      <i>sem dados</i> = sem pagamento para medir (nunca sai como "perfeita"). <b>Versão:</b> o retreino mensal é o que roda em
+      produção; o congelado mostra o que teria acontecido sem retreinar. <b>n</b> conta contrato-dias.</div>
+    <div class="linha"><div class="seg" id="segVer"><b>Versão</b><button data-ver="mensal" class="on">Retreino mensal (produção)</button><button data-ver="congelado">Congelado</button></div>
+      <span class="muted" id="btFonte"></span></div>
+    <div class="tblwrap"><table class="t" id="tBt"></table></div>
+  </div>
+
+  <div class="glass" id="cardCal">
+    <div class="ctitle">🎯 Previu × pagou <span class="muted">calibração isotônica por fase</span><button class="hbtn" data-h="h-cal">ⓘ ajuda</button></div>
+    <div class="help" id="h-cal"><b>O que é:</b> por decil de chance (1 = os 10% de maior chance), a chance média <b>prevista</b>
+      contra a taxa de pagamento <b>observada</b>. <b>Como ler:</b> a logística usa <i>class_weight="balanced"</i>, que ordena bem
+      mas infla o número (linha laranja: prevê muito mais do que paga). A calibração isotônica, ajustada numa safra que o modelo
+      não viu no treino, <b>não muda a ordem</b> e coloca o número no lugar (linha verde sobre as barras). <b>Brier</b> e
+      <b>ECE</b> medem o erro do número: quanto menor, melhor. <b>Por que importa:</b> o valor esperado (chance × ticket) só
+      vale se a chance for de verdade.</div>
+    <div class="tiles" id="calTiles"></div>
+    <div class="chart"><canvas id="chCal"></canvas></div>
+  </div>
+
+  <div class="glass" id="cardLift">
+    <div class="ctitle">📈 Lift por fase <button class="hbtn" data-h="h-lift">ⓘ ajuda</button></div>
+    <div class="help" id="h-lift"><b>Por que este card existe:</b> a pirâmide 10/20/30/40 é cortada <b>dentro de cada fase</b>.
+      "Diamante" não vale o mesmo entre fases: lift 3 numa fase de atraso curto (taxa média alta) e lift 6 numa fase antiga
+      (taxa média baixa) são coisas diferentes em R$. Ler o Diamante como um objeto único entre fases leva a decisão errada.
+      A linha em 1 é a média da fase.</div>
+    <div class="chart"><canvas id="chLift"></canvas></div>
+  </div>
+
+  <div class="g2e">
+    <div class="glass" id="cardEstab">
+      <div class="ctitle">📅 Estabilidade semanal <span class="muted" id="estSub"></span><button class="hbtn" data-h="h-est">ⓘ ajuda</button></div>
+      <div class="help" id="h-est"><b>Como ler:</b> a taxa de pagamento de cada faixa semana a semana (dias maduros). Desvio alto
+        quer dizer que a faixa não entrega de forma previsível — a média esconde a oscilação. Compare a <b>pior semana</b> de uma
+        faixa com a <b>melhor</b> da faixa de baixo: se elas se cruzam, haverá semanas invertidas.</div>
+      <div class="tblwrap"><table class="t" id="tEst"></table></div>
+    </div>
+    <div class="glass" id="cardInv">
+      <div class="ctitle">⚖️ Inversões detectadas <span class="muted" id="invSub"></span><button class="hbtn" data-h="h-inv">ⓘ ajuda</button></div>
+      <div class="help" id="h-inv"><b>Como ler:</b> cada linha é uma semana × fase em que a ordem das faixas quebrou (taxa de
+        pagamento por faixa; em vermelho, a faixa que passou a de cima). <b>Atenção:</b> poucas inversões isoladas entre faixas
+        com taxas quase iguais (Ouro × Prata em fases antigas, perto de 1%) são ruído; inversão persistente na mesma fase, ou
+        envolvendo o Diamante, é sinal de retreino.</div>
+      <div class="tblwrap" style="max-height:360px"><table class="t" id="tInv"></table></div>
+    </div>
+  </div>
+
+  <div class="glass" id="cardEscada">
+    <div class="ctitle">🪜 Escada de candidatos e gate <span class="muted" id="escSub"></span><button class="hbtn" data-h="h-esc">ⓘ ajuda</button></div>
+    <div class="help" id="h-esc"><b>O que é:</b> como o modelo é escolhido. Três degraus, do mais simples ao mais complexo:
+      a <b>régua</b> (sem modelo: quem teve contato recente, depois o menor atraso), a <b>logística</b> e o <b>LightGBM</b>.
+      Cada degrau desafia o campeão da vez e só o substitui se passar nos 4 critérios do gate: (1) captura de R$ no top 10%
+      maior que a do campeão, com o intervalo de confiança bootstrap (reamostrando clientes) inteiro acima de zero;
+      (2) nenhuma fase com AUC pior que 0,01; (3) nenhuma fase com faixas invertidas; (4) acima da régua.
+      <b>Vence o mais simples que passa</b>, não o de maior AUC. Avaliação fora do tempo, safra a safra, com retreino mensal.</div>
+    <div class="escada" id="escada"></div>
+    <div id="vered"></div>
+  </div>
+
+  <div class="g2e" id="gTempo">
+    <div class="glass" id="cardAuc">
+      <div class="ctitle">⏳ AUC fora do tempo <button class="hbtn" data-h="h-auc">ⓘ ajuda</button></div>
+      <div class="help" id="h-auc"><b>Como ler:</b> a AUC de cada safra de teste, que o modelo não viu, para o modelo congelado e o
+        retreinado todo mês. A linha tracejada é a AUC de validação do congelado — o número que "aparece no treino" e não muda
+        mesmo quando a produção piora. As linhas verticais marcam as duas mudanças da carteira: em fev/2026 entram clientes de
+        renda menor (muda a população); em jun/2026 muda a relação entre renda, atraso e pagamento.</div>
+      <div class="linha"><div class="seg" id="segAucM"><button data-am="lightgbm" class="on">LightGBM</button><button data-am="logistica">Logística</button></div></div>
+      <div class="chart"><canvas id="chAuc"></canvas></div>
+    </div>
+    <div class="glass" id="cardPsi">
+      <div class="ctitle">📡 PSI contra a base de treino <button class="hbtn" data-h="h-psi">ⓘ ajuda</button></div>
+      <div class="help" id="h-psi"><b>Como ler:</b> o PSI mede o quanto a distribuição mudou em relação à base de treino do modelo
+        congelado. Acima de 0,25 a população mudou. <b>Atenção:</b> o PSI da renda dispara com a mudança de população (fev/2026),
+        que não piorou o modelo; a mudança de relação (jun/2026), que piora, não aparece em PSI nenhum. PSI alto manda
+        <b>investigar</b>; quem manda retreinar é a queda de desempenho fora do tempo.</div>
+      <div class="chart" style="margin-top:46px"><canvas id="chPsi"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<footer>propensão a pagamento · carteira exemplo · dados sintéticos · projeto de portfólio</footer>
+</div>
+
 <script>
 const DADOS = /*__DADOS__*/;
+/* ======================= utilidades ======================= */
+const $ = id => document.getElementById(id);
+const QS = (s, el = document) => [...el.querySelectorAll(s)];
+const ESTATICO = /estatico/.test(location.search);
+const RM = ESTATICO || matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MENOS = "−";
+const nf = c => new Intl.NumberFormat("pt-BR", {minimumFractionDigits: c, maximumFractionDigits: c});
+const fI = nf(0), f1 = nf(1), f2 = nf(2);
+const sinal = (v, txt) => (v > 0 ? "+" : v < 0 ? MENOS : "") + txt;
+const pct = (v, c = 1) => v == null || !isFinite(v) ? "—" : sinal(v, nf(c).format(Math.abs(v * 100)) + "%");
+const pctAbs = (v, c = 1) => v == null || !isFinite(v) ? "—" : nf(c).format(v * 100) + "%";
+const brlC = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 1e6 ? "R$ " + f1.format(v / 1e6) + " mi" : Math.abs(v) >= 1e3 ? "R$ " + fI.format(v / 1e3) + " mil" : "R$ " + fI.format(v);
+const brl = v => v == null ? "—" : "R$ " + fI.format(v);
+const dBR = s => s.slice(8, 10) + "/" + s.slice(5, 7);
+const dBRY = s => dBR(s) + "/" + s.slice(0, 4);
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const mesAno = s => MESES[+s.slice(5, 7) - 1] + "/" + s.slice(2, 4);
+const css = v => getComputedStyle(document.body).getPropertyValue(v).trim();
+const store = {get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+               set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+
+/* ======================= dados e estado ======================= */
+const M = DADOS.meta, DIAS = M.dias, ND = DIAS.length, FX = M.faixas.map(f => f.key), TODAS = "__TODAS__";
+const FXV = {Diamante: "--fx-d", Ouro: "--fx-o", Prata: "--fx-p", Bronze: "--fx-b"};
+const corFx = k => css(FXV[k]);
+const icone = k => (M.faixas.find(f => f.key === k) || {}).icone || "";
+const S = {fase: TODAS, modo: "per", aba: "oper", fv: "tab", tm: "dia", tu: "qtd", ta: "caixa", tendOff: new Set(),
+           perf: "Diamante", filaDia: null, ver: "mensal", am: "lightgbm", sim: 10};
+const graf = {};
+const temChave = (...k) => k.every(x => DADOS[x] != null);
+function mostrar(id, ok) { const el = $(id); if (el) el.classList.toggle("oculto", !ok); return ok; }
+
+/* ======================= fundo animado (partículas) ======================= */
+(function particulas() {
+  const cv = $("bg"), ctx = cv.getContext("2d");
+  let W, H, P = [], mx = -9999, my = -9999;
+  function criar() {
+    W = cv.width = innerWidth; H = cv.height = innerHeight;
+    const n = Math.min(120, Math.floor(W * H / 14000));
+    P = Array.from({length: n}, () => ({x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35}));
+  }
+  function frame(mover) {
+    const dot = css("--p-dot"), line = css("--p-line"), mouse = css("--p-mouse");
+    ctx.clearRect(0, 0, W, H);
+    for (const p of P) {
+      if (mover) {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > W) p.vx *= -1;
+        if (p.y < 0 || p.y > H) p.vy *= -1;
+        const dx = p.x - mx, dy = p.y - my, dm = Math.hypot(dx, dy);
+        if (dm < 150 && dm > 0.01) { const f = (150 - dm) / 150 * .9; p.x += dx / dm * f; p.y += dy / dm * f; }
+      }
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1.7, 0, Math.PI * 2); ctx.fillStyle = dot; ctx.fill();
+      const dm = Math.hypot(p.x - mx, p.y - my);
+      if (dm < 170) { ctx.strokeStyle = `rgba(${mouse},${(170 - dm) / 170 * .5})`; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(mx, my); ctx.stroke(); }
+    }
+    ctx.lineWidth = .8;
+    for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+      const d = Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y);
+      if (d < 120) { ctx.strokeStyle = `rgba(${line},${(120 - d) / 120 * .22})`;
+        ctx.beginPath(); ctx.moveTo(P[i].x, P[i].y); ctx.lineTo(P[j].x, P[j].y); ctx.stroke(); }
+    }
+  }
+  function loop() { if (!document.hidden) frame(true); requestAnimationFrame(loop); }
+  addEventListener("resize", () => {
+    if (innerWidth !== W) criar(); else { H = cv.height = innerHeight; for (const p of P) p.y = Math.min(p.y, H); }
+    if (RM) frame(false); });
+  addEventListener("mousemove", e => { mx = e.clientX; my = e.clientY; });
+  document.addEventListener("mouseout", e => { if (!e.relatedTarget) { mx = my = -9999; } });
+  criar();
+  if (RM) { frame(false); window.redesenharFundo = () => frame(false); } else { window.redesenharFundo = () => {}; loop(); }
+})();
+
+/* ======================= gráficos ======================= */
+function mk(id, cfg) {
+  if (graf[id]) { graf[id].destroy(); delete graf[id]; }
+  const el = $(id); if (!el) return;
+  Chart.defaults.color = css("--chart-c"); Chart.defaults.borderColor = css("--chart-b");
+  Chart.defaults.font.family = "Inter";
+  cfg.options = Object.assign({responsive: true, maintainAspectRatio: false, animation: RM ? false : {duration: 450}}, cfg.options || {});
+  graf[id] = new Chart(el, cfg);
+}
+function destruir() { for (const k in graf) { graf[k].destroy(); delete graf[k]; } }
+const leg = {position: "top", labels: {boxWidth: 12, usePointStyle: true, filter: i => !i.text.startsWith("_")}};
+const rgba = (hex, a) => { const h = hex.replace("#", ""); const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+const pluginEtapas = labels => ({id: "etapas", afterDraw(ch) {
+  const g = ch.ctx, a = ch.chartArea, cor = document.body.dataset.theme === "light" ? "rgba(15,23,42,.45)" : "rgba(255,255,255,.45)";
+  [["2026-02", "população muda"], ["2026-06", "relação muda"]].forEach(([m, txt]) => {
+    const i = labels.findIndex(l => l >= m); if (i < 0) return;
+    const x = ch.scales.x.getPixelForValue(i);
+    g.save(); g.setLineDash([3, 4]); g.strokeStyle = cor; g.beginPath(); g.moveTo(x, a.top); g.lineTo(x, a.bottom); g.stroke();
+    g.setLineDash([]); g.fillStyle = css("--t2"); g.font = "11px Inter"; g.fillText(txt, x + 4, a.top + 12); g.restore();
+  });
+}});
+
+/* ======================= agregação (Operação) ======================= */
+// diario[dia][fase][faixa] = [n, er, bol, rs_emit, pag_caixa, rs_pag_caixa, pag_coorte, rs_pag_coorte]
+function agr(i1, i2, fase = S.fase) {
+  const out = {}, nd = i2 - i1 + 1;
+  for (const k of FX) out[k] = {n: 0, er: 0, bol: 0, rse: 0, pag: 0, rsp: 0, pagc: 0, rspc: 0};
+  for (let i = i1; i <= i2; i++) {
+    const d = (DADOS.diario[DIAS[i]] || {})[fase] || {};
+    for (const k of FX) { const a = d[k]; if (!a) continue; const o = out[k];
+      o.n += a[0]; o.er += a[1]; o.bol += a[2]; o.rse += a[3]; o.pag += a[4]; o.rsp += a[5]; o.pagc += a[6]; o.rspc += a[7]; }
+  }
+  for (const k of FX) { out[k].n /= nd; out[k].er /= nd; }
+  const t = {n: 0, er: 0, bol: 0, rse: 0, pag: 0, rsp: 0, pagc: 0, rspc: 0};
+  for (const k of FX) for (const c in t) t[c] += out[k][c];
+  out.__T = t;
+  for (const k of [...FX, "__T"]) { const o = out[k];
+    // conversão = dos boletos emitidos no período, quantos já foram pagos (coorte); o caixa mistura boletos de outros dias
+    o.conv = o.bol ? o.pagc / o.bol : null; o.convv = o.rse ? o.rspc / o.rse : null; o.p1000 = o.n ? o.pag / o.n * 1000 : null; }
+  for (const k of [...FX, "__T"]) out[k].lift = t.p1000 ? out[k].p1000 / t.p1000 : null;
+  let top = 0; for (let i = i1; i <= i2; i++) top += ((DADOS.top10 || {})[DIAS[i]] || {})[fase] || 0;
+  t.top10 = DADOS.top10 ? top / nd : null;
+  return out;
+}
+function periodos() {
+  const v = id => +$(id).value;
+  if (S.modo === "dia") return {A: [v("dA"), v("dA")], B: [v("dB"), v("dB")]};
+  if (S.modo === "per") { const a = [v("pA1"), v("pA2")].sort((x, y) => x - y), b = [v("pB1"), v("pB2")].sort((x, y) => x - y); return {A: a, B: b}; }
+  return {A: [v("u1"), v("u2")].sort((x, y) => x - y), B: null};
+}
+const rotPer = p => p[0] === p[1] ? dBRY(DIAS[p[0]]) : `${dBR(DIAS[p[0]])} a ${dBRY(DIAS[p[1]])}`;
+function delta(a, b, inv = false) {
+  if (a == null || b == null) return {cls: "nd", txt: "—"};
+  if (!b) return {cls: "nd", txt: "—"};
+  const v = a / b - 1;
+  if (Math.abs(v) <= .001) return {cls: "flat", txt: pct(v)};
+  return {cls: (inv ? v < 0 : v > 0) ? "up" : "down", txt: pct(v)};
+}
+const idxMenosDias = (i, dias) => { const alvo = new Date(DIAS[i] + "T12:00:00"); alvo.setDate(alvo.getDate() - dias);
+  const s = alvo.toISOString().slice(0, 10); let j = i; while (j > 0 && DIAS[j] > s) j--; return DIAS[j] <= s ? j : null; };
+const idxMenosMes = i => { const d = new Date(DIAS[i] + "T12:00:00"); d.setMonth(d.getMonth() - 1);
+  const s = d.toISOString().slice(0, 10); let j = i; while (j > 0 && DIAS[j] > s) j--; return DIAS[j] <= s ? j : null; };
+
+/* ======================= KPIs ======================= */
+const KPIS = [["Estoque méd. (contratos)", "n", v => fI.format(Math.round(v))], ["Recuperação esperada", "er", brlC],
+  ["Boletos emitidos", "bol", v => fI.format(Math.round(v))], ["Boletos pagos (caixa)", "pag", v => fI.format(Math.round(v))],
+  ["Valor pago", "rsp", brlC], ["Conversão (qtd)", "conv", v => pctAbs(v, 1)], ["Top 10% concentra", "top10", v => pctAbs(v, 1)]];
+const ultimoKpi = {};
+const MATURA = new Set(["conv", "convv", "pagc", "rspc"]);   // dependem de o boleto ter vencido
+const recenteA = p => (new Date(M.hoje + "T12:00:00") - new Date(DIAS[p.A[1]] + "T12:00:00")) / 864e5 < 10;
+function renderKpis(A, B, p) {
+  const rec = recenteA(p);
+  $("kpis").innerHTML = KPIS.map(([nome, k, fmt]) => {
+    const a = A.__T[k], b = B ? B.__T[k] : null;
+    const d = !B ? {cls: "nd", txt: "período único"} : rec && MATURA.has(k) ? {cls: "nd", txt: "em maturação"} : delta(a, b);
+    const bdg = {up: "▲", down: "▼", flat: "→", nd: "•"}[d.cls];
+    return `<div class="kpi ${d.cls}"><div class="h"><span class="l">${nome}</span><span class="bdg" aria-hidden="true">${bdg}</span></div>
+      <div class="v" data-k="${k}" data-to="${a ?? ""}">${a == null ? "—" : fmt(a)}</div>
+      <div class="dl ${d.cls}-t">${d.txt}${B && b != null ? ` <span class="muted">vs ${fmt(b)}</span>` : ""}</div></div>`;
+  }).join("");
+  QS("#kpis .v").forEach((el, i) => {
+    const k = el.dataset.k, to = el.dataset.to === "" ? null : +el.dataset.to, de = ultimoKpi[k], fmt = KPIS[i][2];
+    if (to == null) { delete ultimoKpi[k]; return; }
+    ultimoKpi[k] = to;
+    if (RM || de == null || de === to) return;
+    el.classList.add("animating");
+    const t0 = performance.now();
+    const passo = t => { const x = Math.min(1, (t - t0) / 650), e = 1 - Math.pow(1 - x, 3);
+      el.textContent = fmt(de + (to - de) * e);
+      if (x < 1) requestAnimationFrame(passo); else { el.textContent = fmt(to); el.classList.remove("animating"); } };
+    requestAnimationFrame(passo);
+  });
+}
+
+/* ======================= Funil por faixa ======================= */
+const fxNome = k => k === "__T" ? "Total" : `<span class="fxn"><i style="background:${corFx(k)}"></i>${icone(k)} ${k}</span>`;
+function celula(a, b, fmt, nPeq, maturando = false) {
+  if (b == null) return `<td><b>${a == null ? "—" : fmt(a)}</b></td>`;
+  const d = maturando ? {cls: "flat", txt: "em maturação"} : delta(a, b), cls = nPeq ? "flat" : d.cls;
+  return `<td${nPeq ? ' title="n pequeno: menos de 30 boletos"' : ""}><b>${a == null ? "—" : fmt(a)}</b><span class="dlt ${cls}-t">${d.txt}${nPeq && d.txt !== "—" ? " ·n" : ""}</span><span class="bv">${b == null ? "—" : fmt(b)}</span></td>`;
+}
+const COLS_FUN = [["Contratos méd.", "n", v => fI.format(Math.round(v))], ["Boletos emitidos", "bol", v => fI.format(v)],
+  ["Pagos destes boletos", "pagc", v => fI.format(v)], ["Pagos no caixa", "pag", v => fI.format(v)],
+  ["R$ emitido", "rse", brlC], ["R$ pago no caixa", "rsp", brlC], ["Conv. qtd", "conv", v => pctAbs(v)], ["Conv. valor", "convv", v => pctAbs(v)],
+  ["Pagos / 1.000", "p1000", v => f1.format(v)], ["Lift", "lift", v => f2.format(v) + "×"]];
+function renderFunil(A, B, p) {
+  const recente = recenteA(p);
+  $("funSub").textContent = B ? `A: ${rotPer(p.A)} · B: ${rotPer(p.B)}` : rotPer(p.A);
+  const linhas = [...FX, "__T"].map(k => `<tr class="${k === "__T" ? "tot" : ""}"><td>${fxNome(k)}</td>${COLS_FUN.map(([, c, f]) =>
+    celula(A[k][c], B ? B[k][c] : null, f, B && (A[k].bol < 30 || B[k].bol < 30) && c !== "n", recente && MATURA.has(c))).join("")}</tr>`).join("");
+  $("funNote").classList.toggle("oculto", !recente);
+  $("tFun").innerHTML = `<thead><tr><th>Faixa</th>${COLS_FUN.map(c => `<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${linhas}</tbody>`;
+  if (S.fv === "graf") {
+    mk("chFun1", {type: "bar", data: {labels: FX, datasets: [
+        {label: "A · pagos / 1.000 contratos", data: FX.map(k => A[k].p1000), backgroundColor: FX.map(corFx), borderRadius: 6},
+        ...(B ? [{label: "B · pagos / 1.000 contratos", data: FX.map(k => B[k].p1000), backgroundColor: FX.map(k => rgba(corFx(k), .35)), borderColor: FX.map(corFx), borderWidth: 1, borderRadius: 6}] : [])]},
+      options: {plugins: {legend: leg, title: {display: true, text: "Pagos por 1.000 contratos — compara faixas de tamanhos diferentes"}},
+        scales: {y: {beginAtZero: true}}}});
+    const t = A.__T, etapas = [["Contratos (méd.)", t.n], ["Boletos", t.bol], ["Pagos", t.pag]];
+    mk("chFun2", {type: "bar", data: {labels: etapas.map(e => e[0]), datasets: FX.map(k => ({label: k, data: [A[k].n, A[k].bol, A[k].pag],
+        backgroundColor: corFx(k), borderWidth: 0}))},
+      options: {indexAxis: "y", plugins: {legend: leg, title: {display: true, text: "Funil do período A (escala log)"}},
+        scales: {x: {stacked: true, type: "logarithmic"}, y: {stacked: true}}}});
+  }
+}
+
+/* ======================= Tendência ======================= */
+function renderTend(p) {
+  const fim = p.A[1], ini = Math.max(0, Math.min(p.A[0], fim - 29));
+  const idx = []; for (let i = ini; i <= fim; i++) idx.push(i);
+  const lab = idx.map(i => dBR(DIAS[i])), rs = S.tu === "rs", coorte = S.ta === "coorte";
+  const serie = (k, pos) => { let acc = 0, mes = null;
+    return idx.map(i => { const a = ((DADOS.diario[DIAS[i]] || {})[S.fase] || {})[k]; const v = a ? a[pos] : 0;
+      if (S.tm === "acum") { const m = DIAS[i].slice(0, 7); if (m !== mes) { acc = 0; mes = m; } acc += v; return acc; } return v; }); };
+  const vis = FX.filter(k => !S.tendOff.has(k));
+  const ds = [];
+  vis.forEach(k => ds.push({type: "bar", label: `${k} · boletos`, data: serie(k, rs ? 3 : 2), backgroundColor: rgba(corFx(k), .55),
+    borderColor: rgba(corFx(k), .9), borderWidth: 0, stack: "b", order: 2, borderRadius: 2}));
+  vis.forEach(k => ds.push({type: "line", label: `${k} · pagos`, data: serie(k, rs ? (coorte ? 7 : 5) : (coorte ? 6 : 4)), borderColor: corFx(k),
+    backgroundColor: corFx(k), borderWidth: 2, pointRadius: 0, tension: .25, order: 1, stack: "l-" + k}));   // stack próprio: a linha não empilha
+  mk("chTend", {type: "bar", data: {labels: lab, datasets: ds},
+    options: {interaction: {mode: "index", intersect: false}, plugins: {legend: leg,
+      tooltip: {callbacks: {label: c => `${c.dataset.label}: ${rs ? brlC(c.parsed.y) : fI.format(c.parsed.y)}`}}},
+      scales: {x: {stacked: true, ticks: {maxRotation: 0, autoSkip: true, maxTicksLimit: 12}}, y: {stacked: true, beginAtZero: true,
+        ticks: {callback: v => rs ? brlC(v) : fI.format(v)}}}}});
+}
+
+/* ======================= Desempenho por faixa ======================= */
+function renderFx(A, B) {
+  const cols = [["Contratos méd.", k => A[k].n, k => B && B[k].n, v => fI.format(Math.round(v))],
+    ["% do estoque", k => A[k].n / A.__T.n, k => B && B[k].n / B.__T.n, v => pctAbs(v)],
+    ["Recuperação esperada", k => A[k].er, k => B && B[k].er, brlC],
+    ["% da recuperação esperada", k => A[k].er / A.__T.er, k => B && B[k].er / B.__T.er, v => pctAbs(v)],
+    ["R$ esperado / contrato", k => A[k].er / A[k].n, k => B && B[k].er / B[k].n, brl],
+    ["Pagos / 1.000", k => A[k].p1000, k => B && B[k].p1000, v => f1.format(v)],
+    ["Lift", k => A[k].lift, k => B && B[k].lift, v => f2.format(v) + "×"]];
+  $("fxSub").textContent = B ? `A contra B (laranja)` : "";
+  $("tFx").innerHTML = `<thead><tr><th>Faixa</th>${cols.map(c => `<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${
+    [...FX, "__T"].map(k => `<tr class="${k === "__T" ? "tot" : ""}"><td>${fxNome(k)}</td>${cols.map(([, fa, fb, f]) => celula(fa(k), B ? fb(k) : null, f, false)).join("")}</tr>`).join("")}</tbody>`;
+}
+
+/* ======================= Concentração & simulador ======================= */
+const xsConc = () => Array.from({length: M.pontos_conc}, (_, i) => i / (M.pontos_conc - 1));
+function interp(ys, x) { const n = ys.length - 1, p = x * n, i = Math.min(n - 1, Math.floor(p)); return ys[i] + (ys[i + 1] - ys[i]) * (p - i); }
+function renderConc(p, A) {
+  if (!mostrar("cardConc", temChave("conc"))) return;
+  const dA = DIAS[p.A[1]], dB = p.B ? DIAS[p.B[1]] : null;
+  const yA = (DADOS.conc[dA] || {})[S.fase], yB = dB ? (DADOS.conc[dB] || {})[S.fase] : null;
+  const dR = (DADOS.conc_real || {})[dA] ? dA : M.maduro_ate, yR = ((DADOS.conc_real || {})[dR] || {})[S.fase];
+  if (!yA) { mostrar("cardConc", false); return; }
+  const xs = xsConc().map(x => x * 100);
+  const ds = [{label: `Esperado · ${dBR(dA)}`, data: yA.map((y, i) => ({x: xs[i], y: y * 100})), borderColor: css("--ac"), backgroundColor: rgba(css("--ac"), .12), fill: true, borderWidth: 2, pointRadius: 0}];
+  if (yB) ds.push({label: `Esperado · ${dBR(dB)} (B)`, data: yB.map((y, i) => ({x: xs[i], y: y * 100})), borderColor: css("--ac-cp"), borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0});
+  if (yR) ds.push({label: `Realizado em 30 dias · ${dBR(dR)}`, data: yR.map((y, i) => ({x: xs[i], y: y * 100})), borderColor: css("--pos"), borderWidth: 2, pointRadius: 0});
+  ds.push({label: "_aleatório", data: [{x: 0, y: 0}, {x: 100, y: 100}], borderColor: css("--t2"), borderDash: [2, 4], borderWidth: 1, pointRadius: 0});
+  const sim = S.sim / 100;
+  mk("chConc", {type: "line", data: {datasets: ds}, options: {parsing: false, plugins: {legend: leg,
+      tooltip: {callbacks: {label: c => `${c.dataset.label}: ${f1.format(c.parsed.y)}% com ${f1.format(c.parsed.x)}% do estoque`}}},
+    scales: {x: {type: "linear", min: 0, max: 100, title: {display: true, text: "% do estoque acionado (maior valor esperado primeiro)"}, ticks: {callback: v => v + "%"}},
+      y: {min: 0, max: 100, title: {display: true, text: "% da recuperação"}, ticks: {callback: v => v + "%"}}}},
+    plugins: [{id: "simLinha", afterDraw(ch) { const x = ch.scales.x.getPixelForValue(sim * 100), a = ch.chartArea, g = ch.ctx;
+      g.save(); g.strokeStyle = css("--ac"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x, a.top); g.lineTo(x, a.bottom); g.stroke(); g.restore(); }}]});
+  const est = ((DADOS.diario[dA] || {})[S.fase] || {}), n = FX.reduce((s, k) => s + ((est[k] || [0])[0]), 0);
+  $("simPct").textContent = f1.format(S.sim) + "%"; $("simDia").textContent = dBRY(dA);
+  $("simRec").textContent = pctAbs(interp(yA, sim)); $("simN").textContent = fI.format(Math.round(n * sim)); $("simFora").textContent = pctAbs(1 - sim);
+  const fc = DADOS.filas_cmp || [];
+  $("filasCmp").innerHTML = fc.length ? `<div class="sub-t" style="font:700 13px Sora;margin:14px 0 6px">Fila por valor × fila por chance <span class="muted">(dias maduros, carteira inteira)</span></div>
+    <div class="tblwrap"><table class="t"><thead><tr><th>Capacidade</th><th>Fila por chance<br>pagadores · R$ pago</th><th>Fila por valor esperado<br>pagadores · R$ pago</th></tr></thead><tbody>${
+    [...new Set(fc.map(r => r.capacidade))].map(c => { const ch = fc.find(r => r.capacidade === c && r.fila === "chance"), va = fc.find(r => r.capacidade === c && r.fila === "valor");
+      return `<tr><td>${pctAbs(c, 0)} do estoque</td><td>${pctAbs(ch.pct_pagadores)} · ${pctAbs(ch.pct_valor)}</td><td>${pctAbs(va.pct_pagadores)} · <b class="up-t">${pctAbs(va.pct_valor)}</b></td></tr>`; }).join("")}</tbody></table></div>` : "";
+}
+
+/* ======================= Perfil da faixa ======================= */
+function renderPerf(p) {
+  if (!mostrar("cardPerf", temChave("perfil"))) return;
+  const d = DIAS[p.A[1]], pf = ((DADOS.perfil[d] || {})[S.fase] || {})[S.perf];
+  $("perfBtns").innerHTML = FX.map(k => `<button class="chip ${k === S.perf ? "on" : ""}" data-perf="${k}"><i style="background:${corFx(k)}"></i>${icone(k)} ${k}</button>`).join("");
+  QS("#perfBtns [data-perf]").forEach(b => b.onclick = () => { S.perf = b.dataset.perf; renderPerf(periodos()); });
+  if (!pf) { $("perfNum").innerHTML = '<div class="muted">Sem contratos nesta faixa no dia.</div>'; if (graf.chPerf) { graf.chPerf.destroy(); delete graf.chPerf; } return; }
+  const prods = Object.keys(pf.produto), nomes = {cartao: "Cartão", pessoal: "Pessoal", veiculo: "Veículo"};
+  mk("chPerf", {type: "bar", data: {labels: prods.map(x => nomes[x] || x), datasets: [{label: `${S.perf} · mix de produto (${dBRY(d)})`, data: prods.map(x => pf.produto[x] * 100),
+      backgroundColor: corFx(S.perf), borderRadius: 6}]},
+    options: {indexAxis: "y", layout: {padding: {left: 8}}, plugins: {legend: {display: false}, title: {display: true, text: `Mix de produto · ${S.perf} · ${dBRY(d)}`},
+      tooltip: {callbacks: {label: c => f1.format(c.parsed.x) + "% da faixa"}}}, scales: {x: {beginAtZero: true, max: 100, ticks: {callback: v => v + "%"}}}}});
+  $("perfNum").innerHTML = [["Atraso mediano", fI.format(pf.atraso_med) + " dias"], ["Dívida mediana", brl(pf.valor_med)],
+    ["Com contato certo em 30 dias", pctAbs(pf.cpc30_pct)], ["Chance média (calibrada)", pctAbs(pf.p_med)]]
+    .map(([k, v]) => `<div class="pcard"><div class="pk">${k}</div><div class="pv">${v}</div></div>`).join("");
+}
+
+/* ======================= Detalhamento de contratos ======================= */
+function renderFila() {
+  if (!mostrar("cardFila", temChave("fila"))) return;
+  const dias = Object.keys(DADOS.fila).sort();
+  if (!dias.includes(S.filaDia)) S.filaDia = dias[dias.length - 1];
+  $("filaDias").innerHTML = dias.map(d => `<button data-fd="${d}" class="${d === S.filaDia ? "on" : ""}">${dBR(d)}</button>`).join("");
+  QS("#filaDias [data-fd]").forEach(b => b.onclick = () => { S.filaDia = b.dataset.fd; renderFila(); });
+  const q = $("busca").value.trim();
+  const rows = ((DADOS.fila[S.filaDia] || {})[S.fase] || []).map((r, i) => [i + 1, ...r]).filter(r => !q || String(r[1]).includes(q));
+  $("tFila").innerHTML = `<thead><tr><th>#</th><th>Contrato</th><th class="tx">Fase</th><th class="tx">Faixa</th><th>Chance (30 dias)</th><th>Ticket típico</th><th>Valor esperado</th></tr></thead><tbody>${
+    rows.length ? rows.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td class="tx">${r[2]}</td><td class="tx">${fxNome(r[3])}</td><td>${pctAbs(r[4])}</td><td>${brl(r[5])}</td><td><b>${brl(r[6])}</b></td></tr>`).join("")
+    : `<tr><td colspan="7" class="muted">Nenhum contrato encontrado.</td></tr>`}</tbody>`;
+}
+
+function renderOper() {
+  const p = periodos(), A = agr(...p.A), B = p.B ? agr(...p.B) : null;
+  renderKpis(A, B, p); renderFunil(A, B, p); renderTend(p); renderFx(A, B); renderConc(p, A); renderPerf(p); renderFila();
+}
+
+/* ======================= QUALIDADE ======================= */
+const Q = DADOS.qualidade || {};
+const tagOrd = o => `<span class="tag ${o === "sem dados" ? "semdados" : o}">${o === "INVERTIDA" ? "⚠ " : ""}${o}</span>`;
+const nomeFase = f => f === TODAS ? "Todas as fases" : f;
+function renderBt() {
+  const bt = (Q.backtest || {})[S.ver];
+  if (!mostrar("cardBt", !!bt)) return;
+  $("btFonte").textContent = `dias maduros de ${dBRY(DIAS[0])} a ${dBRY(M.maduro_ate)} · alvo: pagou em até 30 dias`;
+  $("tBt").innerHTML = `<thead><tr><th>Fase</th><th>n (contrato-dias)</th><th>Taxa geral</th><th>AUC</th><th>Taxa Diamante</th><th>Taxa Bronze</th><th title="taxa do Diamante ÷ média das taxas das 4 faixas (regra da ordenação)">Diamante ÷ média</th><th>Ordenação</th></tr></thead><tbody>${
+    bt.map(r => `<tr class="${r.fase === TODAS ? "tot" : ""} ${r.fase === S.fase ? "sel" : ""}"><td>${nomeFase(r.fase)}</td><td>${fI.format(r.n)}</td><td>${pctAbs(r.taxa_geral, 2)}</td>
+      <td>${r.auc == null ? "—" : nf(3).format(r.auc)}</td><td>${pctAbs(r.taxa_diamante)}</td><td>${pctAbs(r.taxa_bronze, 2)}</td>
+      <td>${r.lift == null ? "—" : f2.format(r.lift) + "×"}</td><td>${tagOrd(r.ordenacao)}${r.motivo ? ` <span class="muted">${r.motivo}</span>` : ""}</td></tr>`).join("")}</tbody>`;
+}
+function renderCal() {
+  const pp = Q.previu_pagou;
+  if (!mostrar("cardCal", !!pp)) return;
+  const mA = pp.antes.reduce((s, r) => s + r.previsto * r.n, 0) / pp.antes.reduce((s, r) => s + r.n, 0);
+  const mD = pp.depois.reduce((s, r) => s + r.previsto * r.n, 0) / pp.depois.reduce((s, r) => s + r.n, 0);
+  $("calTiles").innerHTML = [["Taxa real de pagamento", pctAbs(pp.taxa_real, 2), "média dos dias maduros"],
+    ["Chance média prevista", `${pctAbs(mA)} <span class="seta">→</span> ${pctAbs(mD, 2)}`, "score bruto → calibrada"],
+    ["Brier (erro quadrático)", `${nf(3).format(pp.brier.antes)} <span class="seta">→</span> ${nf(3).format(pp.brier.depois)}`, "menor é melhor"],
+    ["ECE (erro de calibração)", `${pctAbs(pp.ece.antes)} <span class="seta">→</span> ${pctAbs(pp.ece.depois, 2)}`, "distância média entre previsto e pago"]]
+    .map(([l, v, s]) => `<div class="tile"><div class="tl">${l}</div><div class="tv">${v}</div><div class="ts">${s}</div></div>`).join("");
+  const lab = pp.depois.map(r => "decil " + r.decil);
+  mk("chCal", {type: "bar", data: {labels: lab, datasets: [
+      {type: "bar", label: "Pagou de fato (observado)", data: pp.depois.map(r => r.observado * 100), backgroundColor: rgba(corFx("Diamante"), .55), borderRadius: 4, order: 3},
+      {type: "line", label: "Previsto pelo score bruto", data: pp.antes.map(r => r.previsto * 100), borderColor: css("--warn"), backgroundColor: css("--warn"), borderWidth: 2, pointRadius: 3, order: 2},
+      {type: "line", label: "Previsto calibrado", data: pp.depois.map(r => r.previsto * 100), borderColor: css("--pos"), backgroundColor: css("--pos"), borderWidth: 2.5, pointRadius: 4, order: 1}]},
+    options: {interaction: {mode: "index", intersect: false}, plugins: {legend: leg, tooltip: {callbacks: {label: c => `${c.dataset.label}: ${f1.format(c.parsed.y)}%`}}},
+      scales: {y: {beginAtZero: true, ticks: {callback: v => v + "%"}, title: {display: true, text: "chance de pagar em 30 dias"}}}}});
+}
+function renderLift() {
+  const lf = Q.lift_fase;
+  if (!mostrar("cardLift", !!lf && lf.length)) return;
+  mk("chLift", {type: "bar", data: {labels: M.fases, datasets: FX.map(k => ({label: k, data: M.fases.map(f => (lf.find(r => r.fase === f && r.faixa === k) || {}).lift ?? null),
+      backgroundColor: corFx(k), borderRadius: 5}))},
+    options: {plugins: {legend: leg, tooltip: {callbacks: {label: c => `${c.dataset.label}: ${f2.format(c.parsed.y)}× a média da fase`}}},
+      scales: {y: {beginAtZero: true, title: {display: true, text: "lift (taxa da faixa ÷ taxa da fase)"}}}},
+    plugins: [{id: "um", afterDraw(ch) { const y = ch.scales.y.getPixelForValue(1), a = ch.chartArea, g = ch.ctx;
+      g.save(); g.strokeStyle = css("--t2"); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(a.left, y); g.lineTo(a.right, y); g.stroke();
+      g.fillStyle = css("--t2"); g.font = "11px Inter"; g.fillText("média da fase", a.right - 84, y - 5); g.restore(); }}]});
+}
+function renderEst() {
+  const e = Q.estab;
+  if (!mostrar("cardEstab", !!e)) return;
+  const rows = e.filter(r => r.fase === S.fase);
+  $("estSub").textContent = nomeFase(S.fase);
+  $("tEst").innerHTML = `<thead><tr><th>Faixa</th><th>Média</th><th>Desvio</th><th>Melhor semana</th><th>Pior semana</th><th>Semanas</th></tr></thead><tbody>${
+    rows.map(r => `<tr><td>${fxNome(r.faixa)}</td><td><b>${pctAbs(r.media, 2)}</b></td><td>${pctAbs(r.desvio, 2)}</td><td>${pctAbs(r.melhor, 2)}</td><td>${pctAbs(r.pior, 2)}</td><td>${r.semanas}</td></tr>`).join("")}</tbody>`;
+}
+function renderInv() {
+  const inv = Q.inv;
+  if (!mostrar("cardInv", !!inv)) return;
+  const rows = inv.filter(r => S.fase === TODAS || r.fase === S.fase);
+  $("invSub").textContent = `${rows.length} semana${rows.length === 1 ? "" : "s"} · ${nomeFase(S.fase)}`;
+  $("tInv").innerHTML = `<thead><tr><th>Semana de</th><th class="tx">Fase</th>${FX.map(k => `<th>${icone(k)} ${k}</th>`).join("")}</tr></thead><tbody>${
+    rows.length ? rows.map(r => `<tr><td>${dBRY(r.semana)}</td><td class="tx">${r.fase}</td>${r.taxas.map((t, i) => {
+      const ruim = i > 0 && r.taxas[i - 1] != null && t != null && t > r.taxas[i - 1];
+      return `<td class="${ruim ? "ruim" : ""}">${pctAbs(t, 2)}</td>`; }).join("")}</tr>`).join("")
+    : `<tr><td colspan="6" class="muted">Nenhuma semana com a ordem quebrada nesta fase.</td></tr>`}</tbody>`;
+}
+function renderEscada() {
+  const es = Q.escada;
+  if (!mostrar("cardEscada", !!es)) return;
+  $("escSub").textContent = `safras de teste ${mesAno(es.safras[0] + "-01")} a ${mesAno(es.safras[es.safras.length - 1] + "-01")}`;
+  const cand = Object.fromEntries(es.candidatos.map(c => [c.nome, c]));
+  const nomesCrit = {captura_top10_ic: "R$ no top 10% (IC 95%)", auc_por_fase: "AUC por fase", sem_inversao: "Sem faixa invertida", acima_da_regua: "Acima da régua"};
+  const degrau = n => { const c = cand[n]; return `<div class="degrau ${es.vencedor === n ? "venc" : ""}"><div class="dn">${c.rotulo}${es.vencedor === n ? " 🏆" : ""}</div>
+    <div class="dd">${{regua: "sem modelo: contato recente, depois menor atraso", logistica: "regressão logística (modelo em produção)", lightgbm: "gradient boosting raso e regularizado"}[n]}</div>
+    <div class="dv">${pctAbs(c.captura_top10)}</div><div class="muted">do R$ pago fica nos 10% do topo · AUC ${nf(3).format(c.auc)}</div></div>`; };
+  const gate = g => `<div class="gatebox"><div class="gt">gate ${g.passou ? "✅ passou" : "⛔ não passou"} →</div>${g.criterios.map(c =>
+    `<div class="crit"><span class="${c.ok ? "ok" : "no"}">${c.ok ? "✓" : "✗"}</span><span><b>${nomesCrit[c.nome] || c.nome}</b><br><span class="muted">${esc(c.detalhe)}</span></span></div>`).join("")}</div>`;
+  $("escada").innerHTML = degrau("regua") + gate(es.etapas[0]) + degrau("logistica") + gate(es.etapas[1]) + degrau("lightgbm");
+  const ult = es.etapas[es.etapas.length - 1];
+  $("vered").innerHTML = `<div class="veredito ${ult.passou ? "" : "no"}"><b>Veredito:</b> ${esc(es.frase)}</div>`;
+}
+function renderTempo() {
+  const t = Q.tempo;
+  if (!mostrar("gTempo", !!t && t.length)) return;
+  const labels = [...new Set(t.map(r => r.safra_teste.slice(0, 7)))].sort();
+  const pega = (mod, modo, campo) => labels.map(l => { const r = t.find(x => x.modelo === mod && x.modo === modo && x.safra_teste.startsWith(l)); return r ? r[campo] : null; });
+  const lab = labels.map(l => mesAno(l + "-01"));
+  mk("chAuc", {type: "line", data: {labels: lab, datasets: [
+      {label: "Congelado (fora do tempo)", data: pega(S.am, "congelado", "AUC"), borderColor: css("--warn"), backgroundColor: css("--warn"), borderWidth: 2, pointRadius: 3},
+      {label: "Retreino mensal (fora do tempo)", data: pega(S.am, "mensal", "AUC"), borderColor: corFx("Diamante"), backgroundColor: corFx("Diamante"), borderWidth: 2, pointRadius: 3},
+      {label: "Validação do congelado", data: pega(S.am, "congelado", "auc_validacao"), borderColor: css("--t2"), borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0}]},
+    options: {plugins: {legend: leg, tooltip: {callbacks: {label: c => `${c.dataset.label}: ${nf(3).format(c.parsed.y)}`}}}, scales: {y: {title: {display: true, text: "AUC"}}}},
+    plugins: [pluginEtapas(labels)]});
+  mk("chPsi", {type: "line", data: {labels: lab, datasets: [
+      {label: "Renda estimada", data: pega("lightgbm", "congelado", "psi_renda"), borderColor: css("--warn"), backgroundColor: css("--warn"), borderWidth: 2, pointRadius: 3},
+      {label: "Score do modelo", data: pega("lightgbm", "congelado", "psi_score"), borderColor: corFx("Diamante"), backgroundColor: corFx("Diamante"), borderWidth: 2, pointRadius: 3},
+      {label: "Dias de atraso", data: pega("lightgbm", "congelado", "psi_dias_atraso"), borderColor: css("--pos"), backgroundColor: css("--pos"), borderWidth: 2, pointRadius: 3}]},
+    options: {plugins: {legend: leg}, scales: {y: {beginAtZero: true, title: {display: true, text: "PSI"}}}},
+    plugins: [pluginEtapas(labels), {id: "lim", afterDraw(ch) { const y = ch.scales.y.getPixelForValue(.25), a = ch.chartArea, g = ch.ctx;
+      if (y < a.top) return; g.save(); g.strokeStyle = css("--neg"); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(a.left, y); g.lineTo(a.right, y); g.stroke();
+      g.fillStyle = css("--neg"); g.font = "11px Inter"; g.fillText("0,25 = população mudou", a.left + 6, y - 5); g.restore(); }}]});
+}
+function renderQual() { renderBt(); renderCal(); renderLift(); renderEst(); renderInv(); renderEscada(); renderTempo(); }
+
+/* ======================= controles ======================= */
+function render() { if (S.aba === "oper") renderOper(); else renderQual(); }
+function opcoesDias(sel, valor) { sel.innerHTML = DIAS.map((d, i) => `<option value="${i}">${dBRY(d)}</option>`).join(""); sel.value = valor; }
+function aplicarModo(m) {
+  S.modo = m; QS("#segModo [data-modo]").forEach(b => b.classList.toggle("on", b.dataset.modo === m));
+  $("ctlDia").classList.toggle("oculto", m !== "dia"); $("ctlPer").classList.toggle("oculto", m !== "per"); $("ctlUni").classList.toggle("oculto", m !== "uni");
+}
+function aplicarTema(t) {
+  if (!["midnight", "dark", "light"].includes(t)) t = "midnight";
+  document.body.dataset.theme = t; store.set("tema", t);
+  QS("#segTema [data-tema]").forEach(b => b.classList.toggle("on", b.dataset.tema === t));
+  window.redesenharFundo();
+}
+function aplicarAba(a) {
+  S.aba = a; QS("[data-aba]").forEach(b => { b.classList.toggle("on", b.dataset.aba === a); b.setAttribute("aria-selected", b.dataset.aba === a); });
+  $("v-oper").classList.toggle("oculto", a !== "oper"); $("v-qual").classList.toggle("oculto", a !== "qual");
+  destruir(); render();
+}
+function seg(id, attr, fn) { QS(`#${id} [data-${attr}]`).forEach(b => b.onclick = () => {
+  QS(`#${id} [data-${attr}]`).forEach(x => x.classList.toggle("on", x === b)); fn(b.dataset[attr]); }); }
+function iniciar() {
+  aplicarTema(store.get("tema") || "midnight");
+  QS("#segTema [data-tema]").forEach(b => b.onclick = () => { aplicarTema(b.dataset.tema); destruir(); render(); });
+  $("sub").innerHTML = `Carteira Exemplo · modelo vigente: <b>logística calibrada</b> (treino ${mesAno(M.safras_treino[0])}–${mesAno(M.safras_treino[2])}, calibração ${mesAno(M.safra_calib)}) · retreino mensal`;
+  $("bFoto").textContent = "📸 Foto de " + dBRY(M.hoje); $("bGer").textContent = "⚙ Gerado em " + M.gerado_em;
+  $("faseSel").innerHTML = `<option value="${TODAS}">Todas as fases</option>` + M.fases.map(f => `<option value="${f}">${f} dias</option>`).join("");
+  $("faseNote").textContent = "A pirâmide Diamante 10% · Ouro 20% · Prata 30% · Bronze 40% é cortada dentro de cada fase.";
+  $("faseSel").onchange = e => { S.fase = e.target.value; render(); };
+  QS("[data-aba]").forEach(b => b.onclick = () => aplicarAba(b.dataset.aba));
+  QS("[data-h]").forEach(b => b.onclick = () => { const h = $(b.dataset.h); h.classList.toggle("on"); b.classList.toggle("on", h.classList.contains("on")); });
+  // períodos: padrão = última semana (5 dias úteis) contra a anterior
+  const u = ND - 1;
+  opcoesDias($("dA"), u); opcoesDias($("dB"), u - 1);
+  opcoesDias($("pA1"), Math.max(0, u - 4)); opcoesDias($("pA2"), u); opcoesDias($("pB1"), Math.max(0, u - 9)); opcoesDias($("pB2"), Math.max(0, u - 5));
+  opcoesDias($("u1"), Math.max(0, u - 21)); opcoesDias($("u2"), u);
+  ["dA", "dB", "pA1", "pA2", "pB1", "pB2", "u1", "u2"].forEach(id => $(id).onchange = () => render());
+  QS("#segModo [data-modo]").forEach(b => b.onclick = () => { aplicarModo(b.dataset.modo); render(); });
+  QS("[data-pd]").forEach(b => b.onclick = () => { const a = +$("dA").value;
+    const j = b.dataset.pd === "d1" ? a - 1 : b.dataset.pd === "d7" ? idxMenosDias(a, 7) : idxMenosMes(a);
+    if (j != null && j >= 0) { $("dB").value = j; render(); } });
+  QS("[data-pp]").forEach(b => b.onclick = () => { const fim = +$("pA2").value;
+    if (b.dataset.pp === "sem") { const i1 = Math.max(0, fim - 4); $("pA1").value = i1; $("pB2").value = Math.max(0, i1 - 1); $("pB1").value = Math.max(0, i1 - 5); }
+    else { const m = DIAS[fim].slice(0, 7); let i1 = fim; while (i1 > 0 && DIAS[i1 - 1].slice(0, 7) === m) i1--;
+      const fB = Math.max(0, i1 - 1), mB = DIAS[fB].slice(0, 7); let iB = fB; while (iB > 0 && DIAS[iB - 1].slice(0, 7) === mB) iB--;
+      $("pA1").value = i1; $("pB1").value = iB; $("pB2").value = fB; }
+    render(); });
+  QS("[data-pu]").forEach(b => b.onclick = () => { const fim = +$("u2").value; let i1;
+    if (b.dataset.pu === "7") i1 = idxMenosDias(fim, 6) ?? 0; else if (b.dataset.pu === "tudo") i1 = 0;
+    else { const m = DIAS[fim].slice(0, 7); i1 = fim; while (i1 > 0 && DIAS[i1 - 1].slice(0, 7) === m) i1--; }
+    $("u1").value = i1; render(); });
+  seg("segFun", "fv", v => { S.fv = v; $("funTab").classList.toggle("oculto", v !== "tab"); $("funGraf").classList.toggle("oculto", v !== "graf"); render(); });
+  seg("segTm", "tm", v => { S.tm = v; renderTend(periodos()); });
+  seg("segTu", "tu", v => { S.tu = v; renderTend(periodos()); });
+  seg("segTa", "ta", v => { S.ta = v; renderTend(periodos()); });
+  $("tendChips").innerHTML = FX.map(k => `<button class="chip" data-tc="${k}"><i style="background:${corFx(k)}"></i>${icone(k)} ${k}</button>`).join("");
+  QS("#tendChips [data-tc]").forEach(b => b.onclick = () => { const k = b.dataset.tc;
+    if (S.tendOff.has(k)) S.tendOff.delete(k); else if (S.tendOff.size < FX.length - 1) S.tendOff.add(k);
+    QS("#tendChips [data-tc]").forEach(x => x.classList.toggle("off", S.tendOff.has(x.dataset.tc))); renderTend(periodos()); });
+  $("sim").oninput = e => { S.sim = +e.target.value; renderConc(periodos()); };
+  $("busca").oninput = () => renderFila();
+  seg("segVer", "ver", v => { S.ver = v; renderBt(); });
+  seg("segAucM", "am", v => { S.am = v; renderTempo(); });
+  aplicarModo("per");
+  aplicarAba(/qualidade/.test(location.search + location.hash) ? "qual" : "oper");
+}
+iniciar();
 </script>
-</body></html>
+</body>
+</html>
