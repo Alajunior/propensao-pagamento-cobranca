@@ -5,7 +5,7 @@ Dois modos para cada modelo:
     - mensal:    retreinado todo mês com as `janela` safras mais recentes que já têm o alvo fechado.
 
 Para cada safra de teste também registramos:
-    - auc_validacao: a AUC num holdout aleatório das safras de treino (o número que "aparece na validação");
+    - auc_validacao: a AUC em 30% dos CLIENTES das safras de treino (o número que "aparece na validação");
     - PSI do score e de duas features contra a janela de treino do modelo congelado (o alarme de monitoramento).
 """
 import time
@@ -13,7 +13,7 @@ import time
 import pandas as pd
 from sklearn.base import clone
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit
 
 from src.avaliar import metricas, psi
 from src.base_analitica import ALVO, CAT, NUM, JANELA_ALVO, montar_base, safras
@@ -30,9 +30,17 @@ def safras_de_treino(d_teste, todas, janela: int = 3) -> list[pd.Timestamp]:
     return elegiveis[-janela:] if len(elegiveis) >= janela else []
 
 
+def _separar(base: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """70/30 POR CLIENTE. As safras empilhadas repetem o mesmo contrato (e o mesmo cliente) mês a mês: separar ao
+    acaso põe o mesmo cliente no treino e na validação, e a AUC de validação sai otimista."""
+    tr_idx, va_idx = next(GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=42)
+                          .split(base, groups=base["id_cliente"]))
+    return base.iloc[tr_idx], base.iloc[va_idx]
+
+
 def _treinar(modelo, base: pd.DataFrame):
-    """Treina em 70% (estratificado) e devolve o modelo, a AUC no holdout de 30% e o tempo de treino."""
-    tr, va = train_test_split(base, test_size=0.3, stratify=base[ALVO], random_state=42)
+    """Treina em 70% dos clientes e devolve o modelo, a AUC nos outros 30% e o tempo de treino."""
+    tr, va = _separar(base)
     t0 = time.perf_counter()
     m = clone(modelo).fit(tr[X], tr[ALVO])
     seg = time.perf_counter() - t0

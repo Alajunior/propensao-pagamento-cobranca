@@ -1,0 +1,122 @@
+{
+  "testes": [
+    {
+      "id": "walk_forward",
+      "titulo": "Validação fora do tempo, safra a safra",
+      "veredito": "ok",
+      "resultado": "AUC média 0,832 em 14 safras; a pior foi 0,813 (out/25)",
+      "detalhe": {
+        "media": 0.8323116067897117,
+        "pior": 0.8134841365926677,
+        "safras": 14
+      }
+    },
+    {
+      "id": "aleatorio_vs_cliente",
+      "titulo": "Validação aleatória × separada por cliente",
+      "veredito": "atencao",
+      "resultado": "o sorteio aleatório superestima a AUC em até 0,7 ponto(s) (logística 0,1, LightGBM 0,7)",
+      "detalhe": {
+        "logistica": {
+          "aleatorio": 0.8312721844468959,
+          "por_cliente": 0.8307555268210084,
+          "gap": 0.0005166576258874844
+        },
+        "lightgbm": {
+          "aleatorio": 0.8371422128295245,
+          "por_cliente": 0.829976629667545,
+          "gap": 0.007165583161979461
+        }
+      }
+    },
+    {
+      "id": "alvo_embaralhado",
+      "titulo": "Alvo embaralhado (o modelo tem que virar moeda)",
+      "veredito": "ok",
+      "resultado": "AUC 0,496 na validação cruzada com o alvo sorteado (esperado entre 0,48 e 0,52)",
+      "detalhe": {
+        "safras_treino": [
+          "2026-03-31",
+          "2026-04-30",
+          "2026-05-31"
+        ],
+        "safra_teste": "2026-06-30",
+        "auc": 0.49575580470263275
+      }
+    },
+    {
+      "id": "gap_treino_teste",
+      "titulo": "Treino × fora do tempo (o modelo decorou?)",
+      "veredito": "ok",
+      "resultado": "AUC 0,833 no treino e 0,857 em jun/26 (diferença −2,4 ponto(s))",
+      "detalhe": {
+        "safras_treino": [
+          "2026-03-31",
+          "2026-04-30",
+          "2026-05-31"
+        ],
+        "safra_teste": "2026-06-30",
+        "auc_treino": 0.8330182482909895,
+        "auc_teste": 0.8569668548855129,
+        "gap": -0.02394860659452347
+      }
+    },
+    {
+      "id": "curva_aprendizado",
+      "titulo": "Curva de aprendizado (mais dados ajudariam?)",
+      "veredito": "ok",
+      "resultado": "de 50% para 100% do treino a AUC muda 0,0 ponto(s): platô, mais linhas não ajudam",
+      "detalhe": {
+        "curva": [
+          {
+            "fracao": 0.1,
+            "linhas": 10135,
+            "auc": 0.8498896569866857
+          },
+          {
+            "fracao": 0.25,
+            "linhas": 25337,
+            "auc": 0.8560251961112055
+          },
+          {
+            "fracao": 0.5,
+            "linhas": 50674,
+            "auc": 0.8569040365761738
+          },
+          {
+            "fracao": 0.75,
+            "linhas": 76011,
+            "auc": 0.8569883628134464
+          },
+          {
+            "fracao": 1.0,
+            "linhas": 101348,
+            "auc": 0.8569668548855129
+          }
+        ],
+        "ganho_50_100": 6.281830933918542e-05
+      }
+    },
+    {
+      "id": "ic_bootstrap",
+      "titulo": "Intervalo de confiança da AUC (bootstrap por cliente)",
+      "veredito": "atencao",
+      "resultado": "AUC 0,857 em jun/26, IC 95% de 0,846 a 0,868",
+      "detalhe": {
+        "auc": 0.8569668548855129,
+        "ic": [
+          0.8462041106023275,
+          0.8682272665046815
+        ],
+        "reamostragens": 1000
+      }
+    }
+  ],
+  "resumo": "4 de 6 testes ok, 2 em atenção, 0 com falha",
+  "safras_treino": [
+    "2026-03-31",
+    "2026-04-30",
+    "2026-05-31"
+  ],
+  "safra_teste": "2026-06-30"
+}

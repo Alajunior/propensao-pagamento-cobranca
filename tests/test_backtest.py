@@ -22,3 +22,12 @@ def test_formato_do_backtest(pasta_pequena):
     assert len(bt) == 2 * len(testaveis)
     assert set(bt["modo"]) == {"congelado", "mensal"}
     assert not bt.duplicated(["safra_teste", "modelo", "modo"]).any()
+
+
+def test_split_por_cliente_nao_repete_cliente():
+    """Safras empilhadas repetem o mesmo contrato (e cliente): validar ao acaso põe o mesmo cliente nos dois lados."""
+    from src.backtest import _separar
+    base = pd.DataFrame({"id_cliente": [i // 3 for i in range(600)], "pagou_30d": [i % 7 == 0 for i in range(600)]})
+    tr, va = _separar(base)
+    assert not set(tr.id_cliente) & set(va.id_cliente)
+    assert 0.2 < len(va) / len(base) < 0.4
