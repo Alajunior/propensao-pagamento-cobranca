@@ -91,6 +91,7 @@ def lift_por_fase(esc: pd.DataFrame) -> pd.DataFrame:
     m = esc[esc["maduro"]]
     taxa_fase = m.groupby("fase")["pagou_30d"].mean()
     t = m.groupby(["fase", "faixa"])["pagou_30d"].mean().reset_index(name="taxa")
-    t["lift"] = t["taxa"] / t["fase"].map(taxa_fase)
+    taxa_fase.index = taxa_fase.index.astype(str)          # a fase pode chegar como categoria
+    t["lift"] = t["taxa"].to_numpy() / t["fase"].astype(str).map(taxa_fase).to_numpy()
     t["faixa"] = pd.Categorical(t["faixa"], ORDEM, ordered=True)
     return t.sort_values(["fase", "faixa"]).astype({"faixa": str})[["fase", "faixa", "lift"]].reset_index(drop=True)

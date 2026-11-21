@@ -1,0 +1,47 @@
+import json
+import re
+
+import pytest
+
+from src.base_analitica import carregar
+from src.montar_painel import CHARTJS, FONTES, montar_dados, montar_html
+
+
+@pytest.fixture(scope="module")
+def dados(pasta_pequena, tmp_path_factory):
+    return montar_dados(carregar(pasta_pequena), inicio="2026-09-01", relatorios=tmp_path_factory.mktemp("rel"))
+
+
+def test_payload_tem_as_chaves(dados):
+    assert {"meta", "diario", "conc", "conc_real", "top10", "perfil", "fila", "filas_cmp", "qualidade"} <= set(dados)
+    assert dados["meta"]["dias"][-1] == "2026-11-30" and len(dados["meta"]["faixas"]) == 4
+    d = dados["diario"][dados["meta"]["dias"][-1]]["__TODAS__"]
+    assert set(d) == {"Diamante", "Ouro", "Prata", "Bronze"} and len(d["Diamante"]) == 8
+    assert "escada" not in dados["qualidade"] and "tempo" not in dados["qualidade"]   # relatórios ausentes
+    assert len(next(iter(dados["conc"].values()))["__TODAS__"]) == 60
+    json.dumps(dados)
+
+
+def test_nada_depois_de_hoje(dados):
+    assert max(dados["diario"]) <= "2026-11-30" and dados["meta"]["maduro_ate"] <= "2026-10-31"
+    assert max(dados["conc_real"]) <= dados["meta"]["maduro_ate"]
+    assert len(dados["fila"]) == 5 and all(len(v["__TODAS__"]) <= 200 for v in dados["fila"].values())
+    # boleto pago no caixa nunca supera o que existe até hoje: soma do caixa = soma da coorte (mesmos boletos)
+    tot = dados["diario"]
+    caixa = sum(v[fx][4] for dia in tot.values() for f, v in dia.items() if f == "__TODAS__" for fx in v)
+    coorte = sum(v[fx][6] for dia in tot.values() for f, v in dia.items() if f == "__TODAS__" for fx in v)
+    assert caixa <= coorte
+
+
+def test_todas_e_soma_das_fases(dados):
+    dia = dados["meta"]["dias"][-1]
+    dd = dados["diario"][dia]
+    for fx in ("Diamante", "Bronze"):
+        assert dd["__TODAS__"][fx][0] == sum(dd[f][fx][0] for f in dados["meta"]["fases"] if f in dd)
+
+
+def test_html_autocontido(dados):
+    html = montar_html(dados)
+    assert "const DADOS = {" in html and "fetch(" not in html and 'type="module"' not in html
+    assert set(re.findall(r"https://[^\s\"'<>)]+", html)) <= {CHARTJS, FONTES, "https://fonts.googleapis.com"}
+    assert len(html.encode("utf-8")) < 5 * 1024 * 1024

@@ -60,3 +60,9 @@ def test_estabilidade_e_lift():
     assert (est.semanas == 3).all() and (est.melhor >= est.pior).all()
     lf = lift_por_fase(esc).set_index(["fase", "faixa"])["lift"]
     assert lf[("0001-0360", "Diamante")] > 1 > lf[("0001-0360", "Bronze")]
+
+
+def test_aceita_fase_e_faixa_como_categoria():
+    esc = _esc_sintetico(pagadores=50).astype({"fase": "category", "faixa": "category"})
+    assert len(lift_por_fase(esc)) == 8 and len(estabilidade_semanal(esc)) == 12
+    assert [r["ordenacao"] for r in backtest_producao(esc)][-1] == "perfeita"

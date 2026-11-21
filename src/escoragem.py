@@ -103,6 +103,7 @@ def escorar_periodo(tabelas: dict, modo: str = "mensal", inicio=INICIO, fim=HOJE
         e["versao"] = f"{modo}-{vig.safra_calib:%Y-%m}"
         partes.append(e)
     esc = pd.concat(partes, ignore_index=True)
+    esc = esc.astype({c: "category" for c in ("fase", "produto", "faixa", "versao")})   # ~9 mi linhas: memória
     if cache is not None:
         arq.parent.mkdir(parents=True, exist_ok=True)
         esc.to_pickle(arq)
