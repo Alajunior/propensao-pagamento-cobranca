@@ -1,0 +1,6 @@
+.git
+.superpowers
+dados/carteira_exemplo
+mlruns
+__pycache__
+.pytest_cache
