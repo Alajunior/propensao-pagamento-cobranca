@@ -7,7 +7,7 @@ ficariam sem prioridade. Cortando dentro de cada faixa, toda equipe recebe a sua
 import numpy as np
 import pandas as pd
 
-FAIXAS_ATRASO = {"01-30": (0, 30), "31-90": (30, 90), "91-360": (90, 360), "361+": (360, np.inf)}
+FAIXAS_ATRASO = {"0001-0360": (0, 360), "0361-0720": (360, 720), "0721-1080": (720, 1080), "1081+": (1080, np.inf)}
 PIRAMIDE = {"Diamante": .10, "Ouro": .20, "Prata": .30, "Bronze": .40}
 
 

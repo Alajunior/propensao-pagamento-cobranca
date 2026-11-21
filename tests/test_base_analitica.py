@@ -45,3 +45,10 @@ def test_safras():
     assert len(s) == 17
     assert s[0] == pd.Timestamp("2025-07-31")
     assert s[-1] == pd.Timestamp("2026-11-30")
+
+
+def test_todas_as_faixas_de_atraso_tem_volume(base):
+    from src.faixas import FAIXAS_ATRASO, faixa_atraso
+    dist = faixa_atraso(base["dias_atraso"]).value_counts(normalize=True)
+    for faixa in FAIXAS_ATRASO:
+        assert dist.get(faixa, 0) >= 0.10, (faixa, dist.to_dict())

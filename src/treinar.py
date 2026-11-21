@@ -23,6 +23,7 @@ from src.modelos import criar_modelos  # noqa: E402
 ARQUIVOS = ["backtest.csv", "comparacao_modelos.csv", "faixas.csv", "estrategias.csv",
             "auc_no_tempo.png", "psi_no_tempo.png", "captura_decil.png"]
 ETAPA_1, ETAPA_2 = pd.Timestamp("2026-02-01"), pd.Timestamp("2026-06-01")
+MODELO_PRODUCAO = "logistica"   # a decisão do README; os gráficos de drift usam o LightGBM, onde o efeito é maior
 
 # paleta categórica validada (ordem fixa) + tinta de texto e referências neutras
 AZUL, LARANJA, VERDE_AGUA = "#2a78d6", "#eb6834", "#1baf7a"
@@ -127,11 +128,11 @@ def main(pasta_dados: Path = PASTA, pasta_saida: Path = Path("relatorios")) -> N
     comp = estavel.groupby("modelo")[["AUC", "KS", "PR-AUC", "captura_top20", "segundos_treino"]].mean()
     comp.sort_values("AUC", ascending=False).round(4).to_csv(saida / "comparacao_modelos.csv")
 
-    # operação: última safra escorada pelo LightGBM retreinado
+    # operação: última safra escorada pelo modelo escolhido para produção, retreinado
     todas = safras()
     ultima = todas[-1]
     treino = pd.concat(montar_base(d, tabelas) for d in safras_de_treino(ultima, todas))
-    modelo, _, _ = _treinar(criar_modelos()["lightgbm"], treino)
+    modelo, _, _ = _treinar(criar_modelos()[MODELO_PRODUCAO], treino)
     base = montar_base(ultima, tabelas)
     base["score"] = modelo.predict_proba(base[X])[:, 1]
     tabela_faixas(base).round(4).to_csv(saida / "faixas.csv", index=False)

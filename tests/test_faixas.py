@@ -47,9 +47,9 @@ def test_capacidade_respeitada():
 
 
 def test_faixas_atraso_cobrem_tudo():
-    assert list(FAIXAS_ATRASO) == ["01-30", "31-90", "91-360", "361+"]
-    assert faixa_atraso(pd.Series([1, 30, 31, 90, 91, 360, 361, 5000])).tolist() == \
-        ["01-30", "01-30", "31-90", "31-90", "91-360", "91-360", "361+", "361+"]
+    assert list(FAIXAS_ATRASO) == ["0001-0360", "0361-0720", "0721-1080", "1081+"]
+    assert faixa_atraso(pd.Series([1, 360, 361, 720, 721, 1080, 1081, 5000])).tolist() == \
+        ["0001-0360", "0001-0360", "0361-0720", "0361-0720", "0721-1080", "0721-1080", "1081+", "1081+"]
 
 
 def test_tabela_faixas_taxa_e_participacao():
@@ -57,5 +57,5 @@ def test_tabela_faixas_taxa_e_participacao():
     t = tabela_faixas(_carteira())
     assert len(t) == 16
     assert t["faixa"].tolist()[:4] == ["Diamante", "Ouro", "Prata", "Bronze"]
-    assert t["faixa_atraso"].tolist()[0] == "01-30" and t["faixa_atraso"].tolist()[-1] == "361+"
+    assert t["faixa_atraso"].tolist()[0] == "0001-0360" and t["faixa_atraso"].tolist()[-1] == "1081+"
     assert abs(t["pct_carteira"].sum() - 1) < 1e-9 and abs(t["pct_pagadores"].sum() - 1) < 1e-9
