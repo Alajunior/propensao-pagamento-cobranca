@@ -15,7 +15,7 @@
       "id": "aleatorio_vs_cliente",
       "titulo": "Validação aleatória × separada por cliente",
       "veredito": "atencao",
-      "resultado": "o sorteio aleatório superestima a AUC em até 0,7 ponto(s) (logística 0,1, LightGBM 0,7)",
+      "resultado": "o sorteio aleatório superestima a AUC em até 0,7 ponto (logística 0,1, LightGBM 0,7)",
       "detalhe": {
         "logistica": {
           "aleatorio": 0.8312721844468959,
@@ -48,7 +48,7 @@
       "id": "gap_treino_teste",
       "titulo": "Treino × fora do tempo (o modelo decorou?)",
       "veredito": "ok",
-      "resultado": "AUC 0,833 no treino e 0,857 em jun/26 (diferença −2,4 ponto(s))",
+      "resultado": "AUC 0,833 no treino e 0,857 em jun/26 (diferença −2,4 pontos)",
       "detalhe": {
         "safras_treino": [
           "2026-03-31",
@@ -65,7 +65,7 @@
       "id": "curva_aprendizado",
       "titulo": "Curva de aprendizado (mais dados ajudariam?)",
       "veredito": "ok",
-      "resultado": "de 50% para 100% do treino a AUC muda 0,0 ponto(s): platô, mais linhas não ajudam",
+      "resultado": "de 50% para 100% do treino a AUC muda 0,0 ponto: platô, mais linhas não ajudam",
       "detalhe": {
         "curva": [
           {
