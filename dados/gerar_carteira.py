@@ -1,7 +1,7 @@
 """Gera a "Carteira Exemplo": base FICTÍCIA de uma assessoria de cobrança (jan/2025 a dez/2026).
 
 Uso:
-    python dados/gerar_carteira.py                 # 20 mil clientes, seed 42
+    python dados/gerar_carteira.py                 # 100 mil clientes, seed 42
     python dados/gerar_carteira.py 3000            # base menor (usada na CI)
     python dados/gerar_carteira.py 3000 --saida /tmp/carteira
 
@@ -174,7 +174,7 @@ def gerar(n_clientes: int, saida: Path, seed: int = 42) -> dict[str, pd.DataFram
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("n_clientes", nargs="?", type=int, default=20_000)
+    ap.add_argument("n_clientes", nargs="?", type=int, default=100_000)
     ap.add_argument("--saida", type=Path, default=SAIDA_PADRAO)
     args = ap.parse_args()
     gerar(args.n_clientes, args.saida)
