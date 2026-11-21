@@ -54,9 +54,10 @@ def treinar_vigente(D, bases: dict) -> Vigente | None:
     return Vigente(modelo, cal, ticket_por_fase(treino), calib, list(treino_ds))
 
 
-def escorar_dia(D, tabelas: dict, vig: Vigente, hoje=HOJE) -> pd.DataFrame:
+def escorar_dia(D, tabelas: dict, vig: Vigente, hoje=HOJE, base: pd.DataFrame | None = None) -> pd.DataFrame:
+    """`base` = a foto do dia já montada (a escoragem guardada de src/producao.py passa a dela)."""
     D = pd.Timestamp(D)
-    e = montar_base(D, tabelas)
+    e = montar_base(D, tabelas) if base is None else base.copy()
     e["dia"] = D
     e["fase"] = faixa_atraso(e["dias_atraso"])
     e["score"] = vig.modelo.predict_proba(e[X])[:, 1]
