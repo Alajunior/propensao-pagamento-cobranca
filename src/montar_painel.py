@@ -7,15 +7,20 @@ Contrato com o front: chave ausente = card escondido. O front nunca recorta faix
 só soma dias e divide. Nada posterior a HOJE entra; alvo só de dia maduro (D+30 <= HOJE).
 """
 import json
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from src.base_analitica import carregar, safras
+from src.backtest import X
+from src.base_analitica import carregar, montar_base, safras
 from src.calibracao import brier, ece, previu_pagou
-from src.escoragem import HOJE, INICIO, _elegiveis, boletos, escorar_periodo
+from src.escoragem import HOJE, INICIO, _elegiveis, boletos, escorar_periodo, treinar_vigente
+from src.linha_tempo import cenarios_mensais, conclusoes
+from src.producao import NOMES_CODIGO, escorar_dia_guardado, salvar_modelo
+from src.sinal import contribuicoes, importancia, medir_sinal, motivos, perfil_tipico, referencia
 from src.faixas import FAIXAS_ATRASO
 from src.qualidade import ORDEM, TODAS, backtest_producao, estabilidade_semanal, inversoes, lift_por_fase
 from src.valor import comparar_filas, curva_concentracao, curva_realizada, top_concentra
@@ -27,7 +32,8 @@ FONTES = ("https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Int
           "&family=JetBrains+Mono:wght@600&display=swap")
 FAIXAS = [{"key": "Diamante", "nome": "Diamante", "icone": "💎"}, {"key": "Ouro", "nome": "Ouro", "icone": "🥇"},
           {"key": "Prata", "nome": "Prata", "icone": "🥈"}, {"key": "Bronze", "nome": "Bronze", "icone": "🥉"}]
-N_FILA, DIAS_FILA, PONTOS = 200, 5, 60
+N_FILA, DIAS_FILA, PONTOS, DIAS_EXEC = 200, 5, 60, 6
+LACUNA = "2026-11-25"   # dia em que a foto do estoque "não chega" (demonstra a trava e o aviso do painel)
 
 
 def _iso(d) -> str:
@@ -60,10 +66,14 @@ def dia_util_seguinte(dias: pd.DatetimeIndex, datas: pd.Series) -> pd.Series:
     return out
 
 
-def _diario(esc, bol, dias) -> dict:
+def _diario(esc, bol, dias, copia: dict | None = None) -> dict:
+    """`copia` = {dia sem foto: dia da foto usada}: estoque e recuperação esperada vêm da última foto."""
     dias_ts = pd.DatetimeIndex(pd.to_datetime(dias))
     est = _com_todas(esc[["dia", "fase", "faixa", "valor_esperado"]].astype({"fase": str, "faixa": str}))
     g_est = est.groupby(["dia", "fase", "faixa"]).agg(n=("valor_esperado", "size"), er=("valor_esperado", "sum"))
+    for sem_foto, usada in (copia or {}).items():
+        extra = g_est.xs(usada, level="dia", drop_level=False).rename(index={usada: sem_foto}, level="dia")
+        g_est = pd.concat([g_est, extra]).sort_index()
     b = bol.astype({"fase": str, "faixa": str}).copy()
     # a faixa vem da foto até a emissão; a contagem vai para o dia útil da emissão / do pagamento (fim de semana → segunda)
     b["dia_painel"] = dia_util_seguinte(dias_ts, b["dia_emit"])
@@ -135,36 +145,120 @@ def _qualidade(esc_m, bt_congelado, relatorios: Path, hoje=HOJE) -> dict:
     return q
 
 
-def montar_dados(tabelas: dict, hoje=HOJE, inicio=INICIO, cache=None, relatorios=RAIZ / "relatorios") -> dict:
+def _execucao(tabelas, bases, dias_exec, lacuna) -> list[dict]:
+    """Roda de verdade a escoragem guardada nos últimos dias úteis, numa pasta temporária, com a lacuna injetada."""
+    out = []
+    with tempfile.TemporaryDirectory() as tmp:
+        mod, pub = Path(tmp) / "modelo", Path(tmp) / "publicado"
+        calib = None
+        for D in dias_exec:
+            vig = treinar_vigente(D, bases)
+            if vig.safra_calib != calib:             # virada do mês: o modelo novo é publicado com manifest
+                salvar_modelo(vig, mod)
+                calib = vig.safra_calib
+            foto = montar_base(D, tabelas).iloc[0:0] if lacuna is not None and D == lacuna else None
+            r = escorar_dia_guardado(D, tabelas, mod, pub, foto=foto)
+            out.append({**r, "nome_codigo": NOMES_CODIGO[r["codigo"]], "versao": f"mensal-{calib:%Y-%m}"})
+    return out
+
+
+def _motivos_fila(fila: dict, tabelas, bases) -> dict:
+    """Acrescenta a cada linha da fila os 2 motivos que mais empurraram a chance para cima (modelo vigente do dia)."""
+    refs = {}
+    for dia, por_fase in fila.items():
+        D = pd.Timestamp(dia)
+        vig = treinar_vigente(D, bases)
+        if vig.safra_calib not in refs:
+            treino = pd.concat(bases[s] for s in vig.safras_treino)
+            refs[vig.safra_calib] = referencia(vig.modelo, treino[X])
+        ids = {r[0] for linhas in por_fase.values() for r in linhas}
+        base = montar_base(D, tabelas)
+        base = base[base["id_contrato"].isin(ids)].set_index("id_contrato")
+        mot = dict(zip(base.index, motivos(contribuicoes(vig.modelo, base[X], refs[vig.safra_calib]))))
+        for linhas in por_fase.values():
+            for r in linhas:
+                r.append(mot.get(r[0], []))
+    return fila
+
+
+def _sinal(tabelas, bases, esc_hoje, hoje) -> dict:
+    vig = treinar_vigente(hoje, bases)
+    treino = pd.concat(bases[s] for s in vig.safras_treino)
+    ref = referencia(vig.modelo, treino[X])
+    base = montar_base(hoje, tabelas).merge(esc_hoje[["id_contrato", "faixa"]].astype({"faixa": str}), on="id_contrato")
+    return {"medir": _recs(medir_sinal(tabelas)),
+            "importancia": _recs(importancia(contribuicoes(vig.modelo, treino[X], ref))),
+            "perfil_tipico": perfil_tipico(base), "foto": _iso(hoje)}
+
+
+def _tempo_exec(esc, esc_c, ece_depois) -> dict | None:
+    m = esc[esc["maduro"]]
+    if not len(m) or ece_depois is None:
+        return None
+    serie = cenarios_mensais(esc, esc_c)
+    diam = m["faixa"].astype(str) == "Diamante"
+    pct_est = float(diam.mean())
+    pct_pag = float(m.loc[diam, "pagou_30d"].sum() / m["pagou_30d"].sum())
+    return {"serie": _recs(serie), "conclusoes": conclusoes(serie, ece_depois, pct_est, pct_pag), "capacidade": 0.30}
+
+
+def montar_dados(tabelas: dict, hoje=HOJE, inicio=INICIO, cache=None, relatorios=RAIZ / "relatorios",
+                 lacuna=LACUNA) -> dict:
     hoje = pd.Timestamp(hoje)
-    bt_cong = backtest_producao(escorar_periodo(tabelas, "congelado", inicio, hoje, cache, hoje))
+    esc_c = escorar_periodo(tabelas, "congelado", inicio, hoje, cache, hoje)
     esc = escorar_periodo(tabelas, "mensal", inicio, hoje, cache, hoje)
+    dias_painel = sorted(esc["dia"].unique())
+    lac = pd.Timestamp(lacuna) if lacuna is not None and pd.Timestamp(lacuna) in set(dias_painel[1:]) else None
+    copia, lacunas = {}, []
+    if lac is not None:   # a foto do dia não chegou: sai da escoragem; o painel segue com a foto anterior
+        usada = dias_painel[dias_painel.index(lac) - 1]
+        esc, esc_c = esc[esc["dia"] != lac], esc_c[esc_c["dia"] != lac]
+        copia = {lac: usada}
+        lacunas = [{"dia": _iso(lac), "motivo": "foto do estoque não chegou (código 3)", "foto_usada": _iso(usada)}]
     dias = sorted(esc["dia"].unique())
     bol = boletos(tabelas, esc, hoje)
     maduro = esc[esc["maduro"]]
     el = _elegiveis(hoje, safras())
     ultimos = set(dias[-DIAS_FILA:])
-    return {
+    bases = {d: montar_base(d, tabelas) for d in safras()}
+
+    def com_lacuna(d: dict) -> dict:
+        for sem_foto, usada in copia.items():
+            if _iso(usada) in d:
+                d[_iso(sem_foto)] = d[_iso(usada)]
+        return d
+
+    qualidade = _qualidade(esc, backtest_producao(esc_c), relatorios, hoje)
+    dados = {
         "meta": {"hoje": _iso(hoje), "gerado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                 "dias": [_iso(d) for d in dias], "fases": list(FAIXAS_ATRASO), "faixas": FAIXAS,
+                 "dias": [_iso(d) for d in dias_painel], "fases": list(FAIXAS_ATRASO), "faixas": FAIXAS,
                  "maduro_ate": _iso(maduro["dia"].max()) if len(maduro) else None,
                  "versao_vigente": str(esc.loc[esc["dia"] == dias[-1], "versao"].iloc[0]),
                  "safra_calib": _iso(el[-1]), "safras_treino": [_iso(d) for d in el[-4:-1]],
-                 "pontos_conc": PONTOS},
-        "diario": _diario(esc, bol, dias),
-        "conc": _por_dia_fase(esc, lambda g: [y for _, y in curva_concentracao(g["valor_esperado"], PONTOS)]),
+                 "pontos_conc": PONTOS, "lacunas": lacunas},
+        "diario": _diario(esc, bol, dias_painel, copia),
+        "conc": com_lacuna(_por_dia_fase(esc, lambda g: [y for _, y in curva_concentracao(g["valor_esperado"], PONTOS)])),
         "conc_real": _por_dia_fase(maduro, lambda g: [y for _, y in curva_realizada(g["valor_esperado"],
                                                                                    g["valor_pago_30d"], PONTOS)]),
-        "top10": _por_dia_fase(esc, lambda g: _r(top_concentra(g["valor_esperado"]), 4)),
-        "perfil": _por_dia_fase(esc, _perfil),
-        "fila": _por_dia_fase(esc[esc["dia"].isin(ultimos)], _fila),
+        "top10": com_lacuna(_por_dia_fase(esc, lambda g: _r(top_concentra(g["valor_esperado"]), 4))),
+        "perfil": com_lacuna(_por_dia_fase(esc, _perfil)),
+        "fila": _motivos_fila(_por_dia_fase(esc[esc["dia"].isin(ultimos)], _fila), tabelas, bases),
         "filas_cmp": _recs(comparar_filas(maduro)),
-        "qualidade": _qualidade(esc, bt_cong, relatorios, hoje),
+        "qualidade": qualidade,
+        "execucao": _execucao(tabelas, bases, dias_painel[-DIAS_EXEC:], lac),
+        "sinal": _sinal(tabelas, bases, esc[esc["dia"] == dias[-1]], dias[-1]),
     }
+    te = _tempo_exec(esc, esc_c, (qualidade.get("previu_pagou") or {}).get("ece", {}).get("depois"))
+    if te:
+        dados["tempo_exec"] = te
+    vali = Path(relatorios) / "validacao.json"
+    if vali.exists():
+        dados["validacao"] = json.loads(vali.read_text(encoding="utf-8"))
+    return dados
 
 
 def montar_html(dados: dict) -> str:
-    js = json.dumps(dados, ensure_ascii=False, separators=(",", ":"))
+    js = json.dumps(dados, ensure_ascii=False, separators=(",", ":"), allow_nan=False)   # NaN quebraria o JS
     return (TEMPLATE.read_text(encoding="utf-8").replace("/*__DADOS__*/", js)
             .replace("__CHARTJS__", CHARTJS).replace("__FONTES__", FONTES))
 
