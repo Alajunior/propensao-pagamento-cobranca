@@ -1,7 +1,7 @@
 estrategia,capacidade,contratos_contatados,pct_pagadores,pct_valor
-ranking_global,0.2,1325,0.6943,0.442
-por_faixa,0.2,1325,0.6552,0.4343
-ranking_global,0.3,1987,0.8046,0.6323
-por_faixa,0.3,1987,0.6966,0.4833
-ranking_global,0.5,3312,0.9149,0.9096
-por_faixa,0.5,3312,0.8506,0.593
+ranking_global,0.2,6804,0.6796,0.5615
+por_faixa,0.2,6804,0.6372,0.5053
+ranking_global,0.3,10205,0.7908,0.7282
+por_faixa,0.3,10205,0.6745,0.5546
+ranking_global,0.5,17009,0.901,0.85
+por_faixa,0.5,17009,0.8587,0.7602

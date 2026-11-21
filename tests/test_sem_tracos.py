@@ -31,8 +31,9 @@ def compilar(termos: list[str]) -> list[re.Pattern]:
 def texto_de(caminho: Path) -> str:
     try:
         return caminho.read_text(encoding="utf-8")
-    except UnicodeDecodeError:   # binário (png): só trechos legíveis, como o comando `strings`
-        return "\n".join(t.decode() for t in re.findall(rb"[\x20-\x7e]{6,}", caminho.read_bytes()))
+    except UnicodeDecodeError:   # binário (png): só trechos com cara de texto (letras, dígitos, espaço e . _ @ : / -)
+        # o ruído dos bytes comprimidos forma sequências "legíveis" ao acaso; pontuação solta quebra o trecho
+        return "\n".join(t.decode() for t in re.findall(rb"[A-Za-z0-9 ._@:/-]{6,}", caminho.read_bytes()))
 
 
 def achar_tracos(padroes: list[re.Pattern], textos: dict[str, str]) -> list[str]:
@@ -85,3 +86,14 @@ def test_sem_tracos_da_empresa():
 
 def test_termo_dentro_de_palavra_nao_acusa():
     assert not achar_tracos(compilar(["cobr"]), {"a.py": "assessoria de cobrança"})
+
+
+def test_binario_ignora_sigla_solta_no_ruido_e_pega_texto(tmp_path):
+    """Bytes comprimidos de PNG geram sequências legíveis ao acaso: uma sigla de 2 letras ali é ruído, não vazamento."""
+    ruido = tmp_path / "a.png"
+    ruido.write_bytes(b"\x89PNG\x00\xff;d'}(|\nXY]UY]YQF\nz5}hp+\n\x00")
+    assert not achar_tracos(compilar(["XY"]), {"a.png": texto_de(ruido)})
+    meta = tmp_path / "b.png"
+    meta.write_bytes(b"\x89PNG\x00\xffSoftware: Empresa Exemplo XY v1\x00\xfe")
+    assert achar_tracos(compilar(["Empresa Exemplo"]), {"b.png": texto_de(meta)})
+    assert achar_tracos(compilar(["XY"]), {"b.png": texto_de(meta)})

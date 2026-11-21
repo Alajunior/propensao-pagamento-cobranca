@@ -1,0 +1,103 @@
+{
+  "candidatos": [
+    {
+      "nome": "regua",
+      "rotulo": "Régua",
+      "captura_top10": 0.31910145330306905,
+      "auc": 0.7332848821923892
+    },
+    {
+      "nome": "logistica",
+      "rotulo": "Logística",
+      "captura_top10": 0.37967659369267104,
+      "auc": 0.8354358997520436
+    },
+    {
+      "nome": "lightgbm",
+      "rotulo": "LightGBM",
+      "captura_top10": 0.3945917243122735,
+      "auc": 0.8385516601116578
+    }
+  ],
+  "etapas": [
+    {
+      "campeao": "regua",
+      "desafiante": "logistica",
+      "criterios": [
+        {
+          "nome": "captura_top10_ic",
+          "ok": true,
+          "detalhe": "diferença +6,1 pp (IC 95% +4,5 a +7,6)"
+        },
+        {
+          "nome": "auc_por_fase",
+          "ok": true,
+          "detalhe": "nenhuma fase pior"
+        },
+        {
+          "nome": "sem_inversao",
+          "ok": true,
+          "detalhe": "faixas em ordem em todas as fases"
+        },
+        {
+          "nome": "acima_da_regua",
+          "ok": true,
+          "detalhe": "38,0% contra 31,9% da régua"
+        }
+      ],
+      "passou": true,
+      "diferenca": 0.060575140389602045,
+      "ic": [
+        0.045487213977880143,
+        0.076398674286591
+      ]
+    },
+    {
+      "campeao": "logistica",
+      "desafiante": "lightgbm",
+      "criterios": [
+        {
+          "nome": "captura_top10_ic",
+          "ok": true,
+          "detalhe": "diferença +1,5 pp (IC 95% +0,8 a +2,2)"
+        },
+        {
+          "nome": "auc_por_fase",
+          "ok": true,
+          "detalhe": "nenhuma fase pior"
+        },
+        {
+          "nome": "sem_inversao",
+          "ok": true,
+          "detalhe": "faixas em ordem em todas as fases"
+        },
+        {
+          "nome": "acima_da_regua",
+          "ok": true,
+          "detalhe": "39,5% contra 31,9% da régua"
+        }
+      ],
+      "passou": true,
+      "diferenca": 0.014915130619602333,
+      "ic": [
+        0.008125980233277772,
+        0.022117750944691185
+      ]
+    }
+  ],
+  "vencedor": "lightgbm",
+  "frase": "LightGBM passou no gate (IC +0,8 a +2,2 pp): é o novo campeão e entra em modo sombra antes de substituir o modelo em produção.",
+  "safras": [
+    "2025-12",
+    "2026-01",
+    "2026-02",
+    "2026-03",
+    "2026-04",
+    "2026-05",
+    "2026-06",
+    "2026-07",
+    "2026-08",
+    "2026-09",
+    "2026-10"
+  ]
+}
