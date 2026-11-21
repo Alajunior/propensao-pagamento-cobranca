@@ -111,17 +111,29 @@ def escorar_periodo(tabelas: dict, modo: str = "mensal", inicio=INICIO, fim=HOJE
 
 
 def boletos(tabelas: dict, esc: pd.DataFrame, hoje=HOJE) -> pd.DataFrame:
-    """Um boleto por acordo (1ª parcela), com a fase e a faixa da última foto do contrato até o dia do acordo."""
+    """Um boleto por PARCELA emitida até hoje, com a fase e a faixa da última foto do contrato até a emissão.
+
+    A parcela j (1, 2, ...) é emitida em data_acordo + 30 × (j − 1) e vence 5 dias depois (como no gerador).
+    O acordo para de emitir depois da primeira parcela não paga (quebra). Pagamento depois de hoje = em aberto.
+    Contar só a 1ª parcela de acordos novos esconderia quem já tem acordo e paga em dia: justamente o Diamante.
+    """
     hoje = pd.Timestamp(hoje)
     ac = tabelas["acordos"]
-    ac = ac[ac["data_acordo"] <= hoje].assign(rs_emit=lambda d: d["valor_acordo"] / d["qtd_parcelas"])
+    pag = tabelas["pagamentos"].sort_values(["id_acordo", "data_pagamento"])
+    pag = pag.assign(parcela=pag.groupby("id_acordo").cumcount() + 1)
+    n_pago = pag.groupby("id_acordo")["parcela"].max()
+    b = ac.loc[ac.index.repeat(ac["qtd_parcelas"])].copy()
+    b["parcela"] = b.groupby("id_acordo").cumcount() + 1
+    b["dia_emit"] = b["data_acordo"] + pd.to_timedelta(30 * (b["parcela"] - 1), unit="D")
+    limite = b["id_acordo"].map(n_pago).fillna(0) + 1      # as pagas + a que quebrou (ou a em aberto)
+    b = b[(b["parcela"] <= limite) & (b["dia_emit"] <= hoje)]
+    b["rs_emit"] = b["valor_acordo"] / b["qtd_parcelas"]
     fotos = esc[["dia", "id_contrato", "fase", "faixa"]].sort_values("dia")
-    b = pd.merge_asof(ac.sort_values("data_acordo"), fotos, left_on="data_acordo", right_on="dia",
-                      by="id_contrato", direction="backward").dropna(subset=["dia"])
-    pag = tabelas["pagamentos"].sort_values("data_pagamento").drop_duplicates("id_acordo")
-    pag = pag[pag["data_pagamento"] <= hoje].set_index("id_acordo")
-    b["dia_pago"] = b["id_acordo"].map(pag["data_pagamento"])
-    b["rs_pago"] = b["id_acordo"].map(pag["valor_pago"]).fillna(0.0)
-    b = b.rename(columns={"data_acordo": "dia_acordo", "dia": "dia_foto"})
-    return b[["id_acordo", "id_contrato", "dia_acordo", "dia_foto", "fase", "faixa", "rs_emit", "dia_pago",
+    b = pd.merge_asof(b.sort_values("dia_emit"), fotos, left_on="dia_emit", right_on="dia", by="id_contrato",
+                      direction="backward").dropna(subset=["dia"])
+    p = pag[pag["data_pagamento"] <= hoje][["id_acordo", "parcela", "data_pagamento", "valor_pago"]]
+    b = b.merge(p, on=["id_acordo", "parcela"], how="left")
+    b = b.rename(columns={"dia": "dia_foto", "data_pagamento": "dia_pago", "valor_pago": "rs_pago"})
+    b["rs_pago"] = b["rs_pago"].fillna(0.0)
+    return b[["id_acordo", "parcela", "id_contrato", "dia_emit", "dia_foto", "fase", "faixa", "rs_emit", "dia_pago",
               "rs_pago"]].reset_index(drop=True)

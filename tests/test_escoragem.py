@@ -42,7 +42,21 @@ def test_boletos_nao_passam_de_hoje(tab):
     esc = escorar_periodo(tab, inicio="2026-10-01")
     b = boletos(tab, esc)
     assert len(b) > 0
-    assert (b.dia_acordo <= HOJE).all() and (b.dia_pago.dropna() <= HOJE).all()
-    assert (b.dia_foto <= b.dia_acordo).all()
+    assert (b.dia_emit <= HOJE).all() and (b.dia_pago.dropna() <= HOJE).all()
+    assert (b.dia_foto <= b.dia_emit).all()
     assert esc.groupby("dia").versao.nunique().eq(1).all()
     assert esc.dia.min() >= pd.Timestamp("2026-10-01") and esc.dia.max() <= HOJE
+
+
+def test_cada_parcela_emitida_e_um_boleto():
+    """Acordo de 3 parcelas com 2 pagas: 3 boletos (o 3º emitido em 30/11 e em aberto); pagamento depois de hoje não conta."""
+    ts = pd.Timestamp
+    tabelas = {"acordos": pd.DataFrame({"id_acordo": [1], "id_contrato": [10], "data_acordo": [ts("2026-10-01")],
+                                        "valor_acordo": [300.0], "qtd_parcelas": [3]}),
+               "pagamentos": pd.DataFrame({"id_acordo": [1, 1, 1], "id_contrato": [10, 10, 10], "valor_pago": [100.0] * 3,
+                                           "data_pagamento": [ts("2026-10-06"), ts("2026-11-05"), ts("2026-12-04")]})}
+    esc = pd.DataFrame({"dia": [ts("2026-09-30")], "id_contrato": [10], "fase": ["0001-0360"], "faixa": ["Ouro"]})
+    b = boletos(tabelas, esc, hoje=ts("2026-11-30")).sort_values("parcela")
+    assert list(b.parcela) == [1, 2, 3] and list(b.dia_emit) == [ts("2026-10-01"), ts("2026-10-31"), ts("2026-11-30")]
+    assert b.dia_pago.notna().tolist() == [True, True, False] and b.rs_pago.tolist() == [100.0, 100.0, 0.0]
+    assert (b.rs_emit == 100.0).all() and (b.faixa == "Ouro").all()
