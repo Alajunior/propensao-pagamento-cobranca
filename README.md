@@ -119,14 +119,14 @@ Safras de teste de dez/2025 a out/2026, cada candidato retreinado todo mês. **C
 
 ### 5. A validação não é a produção, e o PSI vê a mudança errada
 
-| | Até mai/2026 | De jun/2026 em diante |
+| | Até mai/2026 | De jun a out/2026 |
 |---|---|---|
-| LightGBM congelado (AUC fora do tempo) | 0,821 | 0,835 |
-| LightGBM com retreino mensal | 0,823 | 0,847 |
+| LightGBM congelado (AUC fora do tempo) | 0,821 | 0,838 |
+| LightGBM com retreino mensal | 0,823 | 0,850 |
 
 - **Depois da mudança de relação, o congelado fica de 0,5 a 1,6 ponto abaixo do retreinado.** A AUC de validação dele continua dizendo 0,815 o tempo todo.
 - **O PSI da renda passa de 0,25 em jun/2026 e chega a 0,56:** é a mudança de **população** de fev/2026 se acumulando na carteira. Mesmo assim o modelo continuou ordenando bem, então esse alarme foi falso para o desempenho.
-- **A mudança de relação, a que importa, não aparece em PSI nenhum:** o do score fica abaixo de 0,05 e o dos dias de atraso perto de zero.
+- **A mudança de relação, a que importa, não aparece em PSI nenhum:** o do score fica abaixo de 0,03 e o dos dias de atraso perto de zero.
 - **Lição:** PSI alto manda investigar; quem manda retreinar é a queda de desempenho fora do tempo, que chega com 30 dias de atraso. O retreino mensal com janela curta é a defesa.
 
 ### 6. Três modelos ordenam parecido
@@ -159,7 +159,7 @@ pip install -r requirements.txt
 python dados/gerar_carteira.py      # carteira sintética de 100 mil clientes (~12 s)
 python -m src.treinar               # backtest, comparação, escada com gate e relatorios/ (~1,5 min)
 python -m src.montar_painel         # escoragem diária, agregados e docs/index.html (~2,5 min; cache em dados/escoragem/)
-python -m pytest                    # 62 testes
+python -m pytest                    # 63 testes
 ```
 
 Para ver o painel, sirva a pasta `docs/` (por exemplo `python -m http.server --directory docs`) ou abra `docs/index.html`. A cada push na `main`, a CI roda o pipeline do zero numa base pequena, roda os testes e publica a pasta `docs/` no GitHub Pages.
@@ -186,7 +186,7 @@ src/treinar.py               orquestra o backtest, a comparação e a escada
 dags/escoragem_diaria.py     esboço da escoragem diária no Airflow
 docs/                        o painel publicado e as imagens deste README
 relatorios/                  tabelas e gráficos estáticos do backtest
-tests/                       62 testes: grão, futuro, SQL = Python, calibração, faixas, gate, painel, guarda de publicação
+tests/                       63 testes: grão, futuro, SQL = Python, calibração, faixas, gate, painel, guarda de publicação
 ```
 
 ## Próximos passos

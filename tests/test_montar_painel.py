@@ -55,3 +55,15 @@ def test_evento_de_fim_de_semana_vai_para_a_segunda():
     r = dia_util_seguinte(dias, datas)
     assert r.iloc[0] == pd.Timestamp("2026-11-23") and r.iloc[1] == pd.Timestamp("2026-11-23")
     assert pd.isna(r.iloc[2]) and pd.isna(r.iloc[3])   # vazio e depois do último dia ficam de fora
+
+
+def test_tempo_nao_usa_safra_com_alvo_depois_de_hoje(pasta_pequena, tmp_path):
+    import pandas as pd
+    from src.montar_painel import _qualidade
+    from src.escoragem import escorar_periodo
+    linhas = [{"safra_teste": s, "modelo": "logistica", "modo": "mensal", "AUC": .8, "auc_validacao": .8,
+               "psi_score": 0, "psi_renda": 0, "psi_dias_atraso": 0} for s in ("2026-10-31", "2026-11-30")]
+    pd.DataFrame(linhas).to_csv(tmp_path / "backtest.csv", index=False)
+    esc = escorar_periodo(carregar(pasta_pequena), inicio="2026-11-23")
+    q = _qualidade(esc, [], tmp_path, hoje=pd.Timestamp("2026-11-30"))
+    assert [r["safra_teste"] for r in q["tempo"]] == ["2026-10-31"]   # alvo de nov/2026 só fecha em 30/12

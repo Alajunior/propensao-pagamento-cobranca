@@ -111,23 +111,25 @@ def _fila(g: pd.DataFrame) -> list:
             for r in t.itertuples()]
 
 
-def _qualidade(esc_m, bt_congelado, relatorios: Path) -> dict:
+def _qualidade(esc_m, bt_congelado, relatorios: Path, hoje=HOJE) -> dict:
     m = esc_m[esc_m["maduro"]]
     y = m["pagou_30d"].to_numpy()
     q = {"backtest": {"mensal": backtest_producao(esc_m), "congelado": bt_congelado},
-         "previu_pagou": {"antes": _recs(previu_pagou(y, m["score"])), "depois": _recs(previu_pagou(y, m["p_cal"])),
-                          "brier": {"antes": _r(brier(y, m["score"])), "depois": _r(brier(y, m["p_cal"]))},
-                          "ece": {"antes": _r(ece(y, m["score"])), "depois": _r(ece(y, m["p_cal"]))},
-                          "taxa_real": _r(y.mean())},
          "lift_fase": _recs(lift_por_fase(esc_m)), "estab": _recs(estabilidade_semanal(esc_m)),
          "inv": _recs(inversoes(esc_m))}
+    if len(m) >= 10:   # sem dia maduro não há o que comparar: a chave fica ausente e o card some
+        q["previu_pagou"] = {"antes": _recs(previu_pagou(y, m["score"])), "depois": _recs(previu_pagou(y, m["p_cal"])),
+                             "brier": {"antes": _r(brier(y, m["score"])), "depois": _r(brier(y, m["p_cal"]))},
+                             "ece": {"antes": _r(ece(y, m["score"])), "depois": _r(ece(y, m["p_cal"]))},
+                             "taxa_real": _r(y.mean())}
     vered = Path(relatorios) / "veredito.json"
     if vered.exists():
         q["escada"] = json.loads(vered.read_text(encoding="utf-8"))
     bt = Path(relatorios) / "backtest.csv"
     if bt.exists():
         t = pd.read_csv(bt, parse_dates=["safra_teste"])
-        t = t[t["modelo"].isin(["logistica", "lightgbm"])]
+        # safra cujo alvo (d, d+30] ainda não fechou em "hoje" fica de fora: o painel não conhece esse futuro
+        t = t[t["modelo"].isin(["logistica", "lightgbm"]) & (t["safra_teste"] + pd.Timedelta(days=30) <= pd.Timestamp(hoje))]
         q["tempo"] = _recs(t[["safra_teste", "modelo", "modo", "AUC", "auc_validacao", "psi_score", "psi_renda",
                               "psi_dias_atraso"]])
     return q
@@ -157,7 +159,7 @@ def montar_dados(tabelas: dict, hoje=HOJE, inicio=INICIO, cache=None, relatorios
         "perfil": _por_dia_fase(esc, _perfil),
         "fila": _por_dia_fase(esc[esc["dia"].isin(ultimos)], _fila),
         "filas_cmp": _recs(comparar_filas(maduro)),
-        "qualidade": _qualidade(esc, bt_cong, relatorios),
+        "qualidade": _qualidade(esc, bt_cong, relatorios, hoje),
     }
 
 

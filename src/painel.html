@@ -437,7 +437,7 @@ const sinal = (v, txt) => (v > 0 ? "+" : v < 0 ? MENOS : "") + txt;
 const pct = (v, c = 1) => v == null || !isFinite(v) ? "—" : sinal(v, nf(c).format(Math.abs(v * 100)) + "%");
 const pctAbs = (v, c = 1) => v == null || !isFinite(v) ? "—" : nf(c).format(v * 100) + "%";
 const brlC = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 1e6 ? "R$ " + f1.format(v / 1e6) + " mi" : Math.abs(v) >= 1e3 ? "R$ " + fI.format(v / 1e3) + " mil" : "R$ " + fI.format(v);
-const brl = v => v == null ? "—" : "R$ " + fI.format(v);
+const brl = v => v == null || !isFinite(v) ? "—" : "R$ " + fI.format(v);
 const dBR = s => s.slice(8, 10) + "/" + s.slice(5, 7);
 const dBRY = s => dBR(s) + "/" + s.slice(0, 4);
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -553,9 +553,9 @@ function periodos() {
 }
 const rotPer = p => p[0] === p[1] ? dBRY(DIAS[p[0]]) : `${dBR(DIAS[p[0]])} a ${dBRY(DIAS[p[1]])}`;
 function delta(a, b, inv = false) {
-  if (a == null || b == null) return {cls: "nd", txt: "—"};
-  if (!b) return {cls: "nd", txt: "—"};
+  if (a == null || b == null || !b) return {cls: "nd", txt: "—"};
   const v = a / b - 1;
+  if (!isFinite(v)) return {cls: "nd", txt: "—"};   // 0/0 de faixa ou fase sem contratos
   if (Math.abs(v) <= .001) return {cls: "flat", txt: pct(v)};
   return {cls: (inv ? v < 0 : v > 0) ? "up" : "down", txt: pct(v)};
 }
