@@ -1,1 +1,10 @@
 .superpowers/
+dados/carteira_exemplo/
+*.db
+mlruns/
+mlflow.db
+modelos/
+.env
+__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/
