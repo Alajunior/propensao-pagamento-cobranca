@@ -5,6 +5,7 @@
 
 Se o MLflow estiver instalado, cada modelo × modo é registrado no experimento "propensao-pagamento".
 """
+import json
 import sys
 from pathlib import Path
 
@@ -17,11 +18,12 @@ import pandas as pd  # noqa: E402
 from src.avaliar import captura_por_decil  # noqa: E402
 from src.backtest import X, _treinar, rodar_backtest, safras_de_treino  # noqa: E402
 from src.base_analitica import ALVO, PASTA, carregar, montar_base, safras  # noqa: E402
+from src.candidatos import avaliar_escada  # noqa: E402
 from src.faixas import comparar_estrategias, tabela_faixas  # noqa: E402
 from src.modelos import criar_modelos  # noqa: E402
 
 ARQUIVOS = ["backtest.csv", "comparacao_modelos.csv", "faixas.csv", "estrategias.csv",
-            "auc_no_tempo.png", "psi_no_tempo.png", "captura_decil.png"]
+            "auc_no_tempo.png", "psi_no_tempo.png", "captura_decil.png", "veredito.json"]
 ETAPA_1, ETAPA_2 = pd.Timestamp("2026-02-01"), pd.Timestamp("2026-06-01")
 MODELO_PRODUCAO = "logistica"   # a decisão do README; os gráficos de drift usam o LightGBM, onde o efeito é maior
 
@@ -138,6 +140,10 @@ def main(pasta_dados: Path = PASTA, pasta_saida: Path = Path("relatorios")) -> N
     tabela_faixas(base).round(4).to_csv(saida / "faixas.csv", index=False)
     pd.concat([comparar_estrategias(base, c) for c in (0.2, 0.3, 0.5)]).round(4) \
         .to_csv(saida / "estrategias.csv", index=False)
+
+    veredito = avaliar_escada(tabelas)
+    (saida / "veredito.json").write_text(json.dumps(veredito, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(veredito["frase"])
 
     _graficos(bt, captura_por_decil(base[ALVO], base["score"], base["valor_pago_30d"]), saida)
     _mlflow(bt)
