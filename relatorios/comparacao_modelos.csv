@@ -1,0 +1,4 @@
+modelo,AUC,KS,PR-AUC,captura_top20,segundos_treino
+logistica,0.8187,0.5353,0.2413,0.6964,0.0532
+mlp,0.8116,0.5315,0.2513,0.6888,0.63
+lightgbm,0.8101,0.5322,0.2862,0.6873,0.2319
