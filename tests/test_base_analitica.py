@@ -42,6 +42,6 @@ def test_alvo_binario_e_valor_coerente(base):
 
 def test_safras():
     s = safras()
-    assert len(s) == 20
-    assert s[0] == pd.Timestamp("2025-04-30")
+    assert len(s) == 17
+    assert s[0] == pd.Timestamp("2025-07-31")
     assert s[-1] == pd.Timestamp("2026-11-30")

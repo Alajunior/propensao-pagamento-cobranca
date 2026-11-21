@@ -24,7 +24,8 @@ def criar_modelos() -> dict[str, Pipeline]:
     return {
         "logistica": make_pipeline(_preparo(True), LogisticRegression(max_iter=2000, class_weight="balanced")),
         "lightgbm": make_pipeline(_preparo(False), LGBMClassifier(
-            n_estimators=300, learning_rate=0.05, num_leaves=15, random_state=42, verbose=-1)),
+            n_estimators=300, learning_rate=0.05, num_leaves=15, min_child_samples=100,
+            subsample=0.8, subsample_freq=1, colsample_bytree=0.8, reg_lambda=1.0, random_state=42, verbose=-1)),
         "mlp": make_pipeline(_preparo(True), MLPClassifier(
             hidden_layer_sizes=(64, 32), early_stopping=True, random_state=42, max_iter=300)),
     }

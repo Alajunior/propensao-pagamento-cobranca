@@ -52,7 +52,7 @@ def gerar(n_clientes: int, saida: Path, seed: int = 42) -> dict[str, pd.DataFram
         "id_cliente": np.arange(1, n + 1),
         "uf": rng.choice(ufs, n, p=[.35, .14, .12, .09, .09, .08, .07, .06]),
         "idade": rng.integers(18, 81, n),
-        "renda_estimada": np.round(rng.lognormal(np.where(novos, 7.55, 7.9), 0.6), 2),
+        "renda_estimada": np.round(rng.lognormal(np.where(novos, 7.45, 7.9), 0.6), 2),
         "data_cadastro": pd.Timestamp("2018-01-01") + pd.to_timedelta(rng.integers(0, 2500, n), "D"),
     })
 
@@ -77,8 +77,8 @@ def gerar(n_clientes: int, saida: Path, seed: int = 42) -> dict[str, pd.DataFram
              + ct.produto.map({"cartao": 0, "pessoal": 0.1, "veiculo": 0.5}).to_numpy()
              + rng.normal(0, 0.8, m))
     p_v1 = _sig(comum - 0.0035 * atraso + 0.35 * np.log(renda / 2700))
-    # etapa 2: renda deixa de ajudar (e passa a atrapalhar um pouco) e o atraso pesa o dobro
-    p_v2 = _sig(comum - 0.0070 * atraso - 0.10 * np.log(renda / 2700) + 0.9)   # +0.9 mantém a taxa média parecida
+    # etapa 2: o efeito da renda se inverte e o atraso pesa o dobro
+    p_v2 = _sig(comum - 0.0070 * atraso - 0.35 * np.log(renda / 2700) + 0.9)   # +0.9 mantém a taxa média parecida
     tel_bom = rng.random(m) < 0.6                                            # 40% dos telefones são ruins
 
     def p_na_data(idx, datas):

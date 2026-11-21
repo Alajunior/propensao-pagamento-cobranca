@@ -25,8 +25,13 @@ CAT = ["produto", "uf"]
 ALVO = "pagou_30d"
 
 
-def safras(inicio="2025-04-30", fim="2026-11-30") -> list[pd.Timestamp]:
-    """Fins de mês entre inicio e fim (a última precisa de 30 dias de futuro dentro dos dados)."""
+def safras(inicio="2025-07-31", fim="2026-11-30") -> list[pd.Timestamp]:
+    """Fins de mês entre inicio e fim.
+
+    Começa em jul/2025, quando a carteira (180 dias) já está em regime: antes disso os contratos
+    têm menos histórico de contato e a safra não representa a operação. A última safra precisa
+    de 30 dias de futuro dentro dos dados.
+    """
     return list(pd.date_range(inicio, fim, freq="ME"))
 
 
