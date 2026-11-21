@@ -52,3 +52,14 @@ def test_perfil_tipico_sem_nan():
     p = perfil_tipico(b)
     assert p["__TODAS__"]["Ouro"]["renda_estimada"] is None
     json.dumps(p, allow_nan=False)
+
+
+def test_motivo_diz_a_direcao(pasta_pequena):
+    from src.sinal import FRASES, direcoes
+    c = pd.DataFrame({"dias_atraso": [0.9], "tem_acordo_antes": [0.5], "idade": [-0.1]})
+    d = pd.DataFrame({"dias_atraso": [-1], "tem_acordo_antes": [1], "idade": [1]})
+    assert motivos(c, d) == [[FRASES["dias_atraso"][0], FRASES["tem_acordo_antes"][1]]]   # atraso MENOR, JÁ tem acordo
+    t = carregar(pasta_pequena); b = montar_base("2026-08-31", t)
+    m = criar_modelos()["logistica"].fit(b[X], b[ALVO])
+    dd = direcoes(m, b[X].head(20), referencia(m, b[X]))
+    assert set(dd.columns) == set(NUM) and set(np.unique(dd.to_numpy())) <= {-1, 1}

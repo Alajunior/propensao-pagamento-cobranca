@@ -194,13 +194,34 @@ body[data-theme="light"] .degrau{background:#fff}
 .crit .ok{color:var(--pos);font-weight:800}.crit .no{color:var(--neg);font-weight:800}
 .veredito{margin-top:14px;padding:11px 14px;border-left:3px solid var(--pos);background:rgba(91,229,154,.08);border-radius:0 8px 8px 0;font-size:14px}
 .veredito.no{border-left-color:var(--warn);background:rgba(255,159,67,.08)}
+.lac{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:11px 15px;border-radius:12px;cursor:pointer;
+  background:rgba(255,159,67,.10);border:1px solid rgba(255,159,67,.45);border-left:4px solid var(--warn);font-size:13px;color:var(--t3)}
+.lac b{color:var(--strong)} .lac .ic{font-size:18px;line-height:1.2} .lac .det{display:none;margin-top:6px;font-size:12.5px} .lac.on .det{display:block}
+.mot{display:inline-block;font:700 10.5px Inter;padding:2px 8px;border-radius:999px;margin:1px 4px 1px 0;white-space:nowrap;
+  background:rgba(var(--ac-rgb),.10);border:1px solid rgba(var(--ac-rgb),.35);color:var(--acs)}
+.cod{display:inline-block;min-width:26px;text-align:center;padding:2px 9px;border-radius:999px;font:800 11px 'JetBrains Mono',monospace}
+.cod.ok{background:rgba(91,229,154,.16);color:var(--pos);border:1px solid rgba(91,229,154,.45)}
+.cod.no{background:rgba(255,107,129,.18);color:var(--neg);border:1px solid rgba(255,107,129,.6)}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tcard{background:rgba(255,255,255,.045);border:1px solid var(--bd);border-left:4px solid var(--pos);border-radius:12px;padding:13px 15px;min-width:0}
+body[data-theme="light"] .tcard,body[data-theme="light"] .concl{background:#fff}
+.tcard.atencao{border-left-color:var(--warn)} .tcard.falhou{border-left-color:var(--neg)}
+.tcard .tq{font:700 13.5px Sora;color:var(--strong);margin-bottom:6px;display:flex;gap:8px;align-items:flex-start}
+.tcard .tr{font-size:12.5px;color:var(--t3);line-height:1.5}
+.tcard .tv{font:800 11px Inter;letter-spacing:.05em;text-transform:uppercase;margin-top:8px}
+.tcard.ok .tv{color:var(--pos)} .tcard.atencao .tv{color:var(--warn)} .tcard.falhou .tv{color:var(--neg)}
+.resumo{font-size:13.5px;margin:0 0 12px;color:var(--t3)} .resumo b{color:var(--strong)}
+.concls{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.concl{background:var(--glass);border:1px solid var(--bd);border-radius:16px;padding:16px 17px;min-width:0;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.concl .cn{font:800 30px/1.1 Sora;color:var(--ac)} .concl .ct{font:700 14.5px/1.35 Sora;color:var(--strong);margin:8px 0 6px}
+.concl .cx{font-size:12.5px;color:var(--t3);line-height:1.5}
 footer{margin-top:24px;padding-top:14px;border-top:1px solid rgba(var(--ac-rgb),.18);text-align:center;font:600 12px 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--t2)}
 .oculto{display:none!important}
 /* responsivo */
 @media(max-width:1400px){.kpis{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:1100px){.escada{grid-template-columns:1fr}.gatebox{min-width:0;padding:4px 6px}.gatebox .gt{text-align:left}}
+@media(max-width:1100px){.tgrid{grid-template-columns:1fr 1fr}.concls{grid-template-columns:1fr 1fr}.escada{grid-template-columns:1fr}.gatebox{min-width:0;padding:4px 6px}.gatebox .gt{text-align:left}}
 @media(max-width:980px){.g2,.g2e{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:700px){body{padding:12px}.simg{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.tgrid,.concls{grid-template-columns:1fr}body{padding:12px}.simg{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi .v{font-size:18px}.tabs button{padding:9px 14px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.kpi.up{animation:none;box-shadow:0 0 0 1px rgba(91,229,154,.25),0 0 14px rgba(91,229,154,.20)}}
 </style>
@@ -228,10 +249,12 @@ footer{margin-top:24px;padding-top:14px;border-top:1px solid rgba(var(--ac-rgb),
 <div class="tabs" role="tablist">
   <button role="tab" data-aba="oper" class="on">📋 Operação &amp; Acompanhamento</button>
   <button role="tab" data-aba="qual">🔬 Qualidade do Modelo</button>
+  <button role="tab" data-aba="tempo" id="tabTempo">📈 Linha do tempo</button>
 </div>
 
 <!-- ============================ OPERAÇÃO ============================ -->
 <section id="v-oper">
+  <div class="lac oculto" id="lacBanner" role="button" tabindex="0"></div>
   <div class="glass">
     <div class="ctitle">🗓 Período em análise <span class="muted">comanda os indicadores e todos os cards desta aba</span>
       <button class="hbtn" data-h="h-per">ⓘ ajuda</button></div>
@@ -318,6 +341,7 @@ footer{margin-top:24px;padding-top:14px;border-top:1px solid rgba(var(--ac-rgb),
       <div class="linha" id="perfBtns"></div>
       <div class="chart h240"><canvas id="chPerf"></canvas></div>
       <div class="pgrid" id="perfNum"></div>
+      <div id="perfTipico"></div>
     </div>
   </div>
 
@@ -330,6 +354,16 @@ footer{margin-top:24px;padding-top:14px;border-top:1px solid rgba(var(--ac-rgb),
     <div class="linha"><div class="seg" id="filaDias"></div><input id="busca" placeholder="Buscar contrato…" aria-label="Buscar contrato"
       style="font:13px Inter;color:var(--text);background:var(--inp);border:1px solid var(--bd-i);border-radius:9px;padding:7px 10px;min-width:180px"></div>
     <div class="tblwrap" style="max-height:420px"><table class="t" id="tFila"></table></div>
+  </div>
+
+  <div class="glass" id="cardExec">
+    <div class="ctitle">⚙ Execução da escoragem <span class="muted">últimos dias úteis</span><button class="hbtn" data-h="h-exec">ⓘ ajuda</button></div>
+    <div class="help" id="h-exec"><b>O que é:</b> o resultado da escoragem diária de cada dia, com as travas de produção. Antes de
+      publicar, ela confere, nesta ordem: que não está regravando um dia passado (código 7); que o modelo em disco é o do manifest,
+      pelo sha256 (código 5); que a foto do estoque chegou (código 3); que o volume não caiu abaixo de 85% do último dia publicado
+      (código 4); e que a pirâmide 10/20/30/40 bate em cada fase (código 6). Só com tudo ok (código 0) o arquivo do dia é publicado,
+      de forma atômica. <b>Atenção:</b> a falta de foto em 25/11 é simulada para mostrar a trava; o painel usa a foto anterior e avisa no topo.</div>
+    <div class="tblwrap"><table class="t" id="tExec"></table></div>
   </div>
 </section>
 
@@ -399,6 +433,36 @@ footer{margin-top:24px;padding-top:14px;border-top:1px solid rgba(var(--ac-rgb),
     <div id="vered"></div>
   </div>
 
+  <div class="glass" id="cardBateria">
+    <div class="ctitle">🧪 Bateria de validação <span class="muted" id="batSub"></span><button class="hbtn" data-h="h-bat">ⓘ ajuda</button></div>
+    <div class="help" id="h-bat"><b>O que é:</b> seis perguntas que um revisor faria antes de confiar no modelo. <b>Fora do tempo:</b> a
+      AUC não despenca em nenhuma safra. <b>Aleatória × por cliente:</b> o mesmo contrato aparece em várias safras; sortear a validação
+      ao acaso põe o mesmo cliente dos dois lados e deixa a AUC otimista — o projeto passou a separar por cliente. <b>Alvo embaralhado:</b>
+      com o alvo sorteado, o modelo tem que virar moeda (AUC ~0,50); se não virar, alguma etapa vaza. <b>Treino × teste:</b> o modelo não
+      decorou o treino. <b>Curva de aprendizado:</b> mais dados ainda ajudariam? <b>IC bootstrap:</b> quanto a AUC varia só pelo acaso.
+      <b>Atenção</b> não é falha: é um ponto para acompanhar.</div>
+    <div class="resumo" id="batResumo"></div>
+    <div class="tgrid" id="batGrid"></div>
+  </div>
+
+  <div class="g2e" id="gSinal">
+    <div class="glass" id="cardImp">
+      <div class="ctitle">🧠 Por que o modelo decide <button class="hbtn" data-h="h-imp">ⓘ ajuda</button></div>
+      <div class="help" id="h-imp"><b>O que é:</b> o peso médio de cada variável na decisão da logística vigente (log-odds, contra o
+        contrato médio do treino). Na logística a conta é exata: cada variável soma ou subtrai do log-odds, sem aproximação. É daqui
+        que saem os "motivos" de cada contrato na fila. <b>Atenção:</b> peso grande não é causa — "já tem acordo" pesa porque quem já
+        fez acordo costuma pagar a parcela, não porque o acordo cause o pagamento.</div>
+      <div class="chart h340"><canvas id="chImp"></canvas></div>
+    </div>
+    <div class="glass" id="cardSinal">
+      <div class="ctitle">🔎 Medir o sinal antes de modelar <span class="muted" id="sinSub"></span><button class="hbtn" data-h="h-sin">ⓘ ajuda</button></div>
+      <div class="help" id="h-sin"><b>O que é:</b> cada variável <b>sozinha</b>, na fase escolhida: a AUC dela e quantos dos pagadores
+        ficam nos 40% do topo dela, contra os 40% do acaso e contra o modelo inteiro. <b>Como ler:</b> mostra de onde vem o poder do
+        modelo antes de qualquer conta complexa. Direção "−" quer dizer que valores menores pagam mais (ex.: menos dias de atraso).</div>
+      <div class="tblwrap" style="max-height:340px"><table class="t" id="tSinal"></table></div>
+    </div>
+  </div>
+
   <div class="g2e" id="gTempo">
     <div class="glass" id="cardAuc">
       <div class="ctitle">⏳ AUC fora do tempo <button class="hbtn" data-h="h-auc">ⓘ ajuda</button></div>
@@ -417,6 +481,21 @@ footer{margin-top:24px;padding-top:14px;border-top:1px solid rgba(var(--ac-rgb),
         <b>investigar</b>; quem manda retreinar é a queda de desempenho fora do tempo.</div>
       <div class="chart" style="margin-top:46px"><canvas id="chPsi"></canvas></div>
     </div>
+  </div>
+</section>
+
+<!-- ============================ LINHA DO TEMPO ============================ -->
+<section id="v-tempo" class="oculto">
+  <div class="concls" id="concls"></div>
+  <div class="glass" id="cardTempoExec">
+    <div class="ctitle">📈 Sem modelo × congelado × retreino mensal <span class="muted">capacidade fixa de 30% do estoque</span>
+      <button class="hbtn" data-h="h-lt">ⓘ ajuda</button></div>
+    <div class="help" id="h-lt"><b>O que é:</b> mês a mês, o que a operação teria alcançado acionando os 30% do estoque com maior
+      prioridade em três cenários: <b>sem modelo</b> (a régua: contato recente, depois menor atraso), o <b>modelo congelado</b> do
+      primeiro mês e o <b>retreino mensal</b>, que roda em produção. <b>Atenção:</b> o dado é sintético e o pagamento não depende de quem
+      foi acionado — a comparação mede a qualidade da ordem, não o efeito do contato. Só meses com 30 dias de futuro.</div>
+    <div class="linha"><div class="seg" id="segLt"><b>Métrica</b><button data-lt="pct_pagadores" class="on">% dos pagadores</button><button data-lt="pct_valor">% do R$ pago</button><button data-lt="pag_por_mil">Pagamentos por 1.000 acionados</button></div></div>
+    <div class="chart h340"><canvas id="chLt"></canvas></div>
   </div>
 </section>
 
@@ -453,7 +532,7 @@ const FXV = {Diamante: "--fx-d", Ouro: "--fx-o", Prata: "--fx-p", Bronze: "--fx-
 const corFx = k => css(FXV[k]);
 const icone = k => (M.faixas.find(f => f.key === k) || {}).icone || "";
 const S = {fase: TODAS, modo: "per", aba: "oper", fv: "tab", tm: "dia", tu: "qtd", ta: "caixa", tendOff: new Set(),
-           perf: "Diamante", filaDia: null, ver: "mensal", am: "lightgbm", sim: 10};
+           perf: "Diamante", filaDia: null, ver: "mensal", am: "lightgbm", sim: 10, lt: "pct_pagadores"};
 const graf = {};
 const temChave = (...k) => k.every(x => DADOS[x] != null);
 function mostrar(id, ok) { const el = $(id); if (el) el.classList.toggle("oculto", !ok); return ok; }
@@ -708,6 +787,18 @@ function renderPerf(p) {
   $("perfNum").innerHTML = [["Atraso mediano", fI.format(pf.atraso_med) + " dias"], ["Dívida mediana", brl(pf.valor_med)],
     ["Com contato certo em 30 dias", pctAbs(pf.cpc30_pct)], ["Chance média (calibrada)", pctAbs(pf.p_med)]]
     .map(([k, v]) => `<div class="pcard"><div class="pk">${k}</div><div class="pv">${v}</div></div>`).join("");
+  renderPerfTipico();
+}
+const PT_NOMES = [["dias_atraso", "Atraso (dias)", v => fI.format(v)], ["valor_divida", "Dívida", brl], ["idade", "Idade", v => fI.format(v)],
+  ["renda_estimada", "Renda estimada", brl], ["qtd_acion_30d", "Acionamentos em 30 dias", v => fI.format(v)],
+  ["qtd_cpc_30d", "Contatos certos em 30 dias", v => fI.format(v)], ["dias_desde_ult_cpc", "Dias desde o último contato certo", v => fI.format(v)],
+  ["tem_acordo_antes", "Já tem acordo", v => pctAbs(v, 0)]];
+function renderPerfTipico() {
+  const pt = ((DADOS.sinal || {}).perfil_tipico || {})[S.fase];
+  if (!pt) { $("perfTipico").innerHTML = ""; return; }
+  $("perfTipico").innerHTML = `<div class="sub-t" style="font:700 13px Sora;margin:14px 0 6px">Perfil típico por faixa <span class="muted">(medianas · foto de ${dBRY(DADOS.sinal.foto)})</span></div>
+    <div class="tblwrap"><table class="t"><thead><tr><th>Variável</th>${FX.map(k => `<th>${icone(k)} ${k}</th>`).join("")}</tr></thead><tbody>${
+    PT_NOMES.map(([c, n, fmt]) => `<tr><td class="tx">${n}</td>${FX.map(k => { const v = (pt[k] || {})[c]; return `<td>${v == null ? "—" : fmt(v)}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 
 /* ======================= Detalhamento de contratos ======================= */
@@ -719,14 +810,33 @@ function renderFila() {
   QS("#filaDias [data-fd]").forEach(b => b.onclick = () => { S.filaDia = b.dataset.fd; renderFila(); });
   const q = $("busca").value.trim();
   const rows = ((DADOS.fila[S.filaDia] || {})[S.fase] || []).map((r, i) => [i + 1, ...r]).filter(r => !q || String(r[1]).includes(q));
-  $("tFila").innerHTML = `<thead><tr><th>#</th><th>Contrato</th><th class="tx">Fase</th><th class="tx">Faixa</th><th>Chance (30 dias)</th><th>Ticket típico</th><th>Valor esperado</th></tr></thead><tbody>${
-    rows.length ? rows.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td class="tx">${r[2]}</td><td class="tx">${fxNome(r[3])}</td><td>${pctAbs(r[4])}</td><td>${brl(r[5])}</td><td><b>${brl(r[6])}</b></td></tr>`).join("")
-    : `<tr><td colspan="7" class="muted">Nenhum contrato encontrado.</td></tr>`}</tbody>`;
+  $("tFila").innerHTML = `<thead><tr><th>#</th><th>Contrato</th><th class="tx">Fase</th><th class="tx">Faixa</th><th>Chance (30 dias)</th><th>Ticket típico</th><th>Valor esperado</th><th class="tx">Por quê</th></tr></thead><tbody>${
+    rows.length ? rows.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td class="tx">${r[2]}</td><td class="tx">${fxNome(r[3])}</td><td>${pctAbs(r[4])}</td><td>${brl(r[5])}</td><td><b>${brl(r[6])}</b></td><td class="tx">${(r[7] || []).map(m => `<span class="mot">↑ ${esc(m)}</span>`).join("") || '<span class="muted">—</span>'}</td></tr>`).join("")
+    : `<tr><td colspan="8" class="muted">Nenhum contrato encontrado.</td></tr>`}</tbody>`;
+}
+
+function renderLacuna() {
+  const l = M.lacunas || [];
+  if (!mostrar("lacBanner", l.length > 0)) return;
+  $("lacBanner").innerHTML = `<span class="ic">📷</span><div><b>${l.length} dia${l.length > 1 ? "s" : ""} sem foto do estoque: ${l.map(x => dBR(x.dia)).join(", ")}</b>
+    — a escoragem saiu com código 3 e o painel usa a foto de ${l.map(x => dBR(x.foto_usada)).join(", ")}. <span class="muted">(clique para detalhes)</span>
+    <div class="det">${l.map(x => `${dBRY(x.dia)}: ${esc(x.motivo)}. Estoque, recuperação esperada, concentração e perfil desse dia repetem a foto de ${dBRY(x.foto_usada)};
+    boletos e pagamentos do dia continuam contando, porque vêm do sistema de cobrança, não da foto. A fila desse dia não existe.`).join("<br>")}</div></div>`;
+}
+const NOME_COD = {0: "ok", 3: "foto ausente", 4: "volume baixo", 5: "hash divergente", 6: "pirâmide fora", 7: "dia passado"};
+function renderExec() {
+  const ex = DADOS.execucao;
+  if (!mostrar("cardExec", !!ex && ex.length)) return;
+  const sim = v => v == null ? '<span class="muted">—</span>' : v ? '<span class="up-t">✓</span>' : '<span class="down-t">✗</span>';
+  $("tExec").innerHTML = `<thead><tr><th>Dia</th><th class="tx">Código</th><th>Contratos</th><th>Volume vs anterior</th><th>Pirâmide</th><th>Hash do modelo</th><th class="tx">Versão</th><th class="tx">Motivo</th></tr></thead><tbody>${
+    ex.map(e => `<tr><td>${dBRY(e.dia)}</td><td class="tx"><span class="cod ${e.codigo === 0 ? "ok" : "no"}">${e.codigo}</span> ${NOME_COD[e.codigo] || e.nome_codigo}</td>
+      <td>${e.linhas ? fI.format(e.linhas) : "—"}</td><td>${e.volume_vs_anterior == null ? "—" : pctAbs(e.volume_vs_anterior)}</td>
+      <td>${sim(e.piramide_ok)}</td><td>${sim(e.sha_ok)}</td><td class="tx">${esc(e.versao || "")}</td><td class="tx muted">${esc(e.motivo)}</td></tr>`).join("")}</tbody>`;
 }
 
 function renderOper() {
   const p = periodos(), A = agr(...p.A), B = p.B ? agr(...p.B) : null;
-  renderKpis(A, B, p); renderFunil(A, B, p); renderTend(p); renderFx(A, B); renderConc(p, A); renderPerf(p); renderFila();
+  renderKpis(A, B, p); renderFunil(A, B, p); renderTend(p); renderFx(A, B); renderConc(p, A); renderPerf(p); renderFila(); renderLacuna(); renderExec();
 }
 
 /* ======================= QUALIDADE ======================= */
@@ -826,10 +936,49 @@ function renderTempo() {
       if (y < a.top) return; g.save(); g.strokeStyle = css("--neg"); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(a.left, y); g.lineTo(a.right, y); g.stroke();
       g.fillStyle = css("--neg"); g.font = "11px Inter"; g.fillText("0,25 = população mudou", a.left + 6, y - 5); g.restore(); }}]});
 }
-function renderQual() { renderBt(); renderCal(); renderLift(); renderEst(); renderInv(); renderEscada(); renderTempo(); }
+const ICO = {ok: "✓", atencao: "⚠", falhou: "✗"}, ROT = {ok: "ok", atencao: "atenção", falhou: "falhou"};
+function renderBateria() {
+  const v = DADOS.validacao;
+  if (!mostrar("cardBateria", !!v && (v.testes || []).length)) return;
+  $("batSub").textContent = v.safra_teste ? `treino ${v.safras_treino.map(d => mesAno(d)).join(", ")} · teste ${mesAno(v.safra_teste)}` : "";
+  $("batResumo").innerHTML = `<b>${esc(v.resumo)}.</b>`;
+  $("batGrid").innerHTML = v.testes.map(t => `<div class="tcard ${t.veredito}"><div class="tq"><span>${ICO[t.veredito]}</span><span>${esc(t.titulo)}</span></div>
+    <div class="tr">${esc(t.resultado)}</div><div class="tv">${ROT[t.veredito]}</div></div>`).join("");
+}
+function renderSinal() {
+  const sg = DADOS.sinal;
+  if (!mostrar("gSinal", !!sg)) return;
+  const imp = (sg.importancia || []).slice(0, 10);
+  mk("chImp", {type: "bar", data: {labels: imp.map(r => r.nome), datasets: [{label: "peso médio (|log-odds|)", data: imp.map(r => r.media_abs),
+      backgroundColor: rgba(css("--ac"), .75), borderRadius: 5}]},
+    options: {indexAxis: "y", layout: {padding: {left: 6}}, plugins: {legend: {display: false},
+      tooltip: {callbacks: {label: c => `peso médio ${nf(3).format(c.parsed.x)} em log-odds`}}}, scales: {x: {beginAtZero: true}}}});
+  const rows = (sg.medir || []).filter(r => r.fase === S.fase);
+  $("sinSub").textContent = nomeFase(S.fase);
+  $("tSinal").innerHTML = `<thead><tr><th class="tx">Variável sozinha</th><th>AUC</th><th>Direção</th><th>Pagadores no top 40%</th><th>Acaso</th><th>Modelo</th></tr></thead><tbody>${
+    rows.map(r => `<tr><td class="tx">${esc(r.nome)}</td><td><b>${nf(3).format(r.auc)}</b></td><td>${r.direcao}</td><td>${pctAbs(r.captura_top40)}</td><td class="muted">40,0%</td><td>${pctAbs(r.captura_modelo)}</td></tr>`).join("")
+    || '<tr><td colspan="6" class="muted">Sem pagadores suficientes nesta fase.</td></tr>'}</tbody>`;
+}
+function renderQual() { renderBt(); renderCal(); renderLift(); renderEst(); renderInv(); renderEscada(); renderBateria(); renderSinal(); renderTempo(); }
+
+/* ======================= LINHA DO TEMPO ======================= */
+function renderTempoExec() {
+  const te = DADOS.tempo_exec;
+  if (!te) return;
+  $("concls").innerHTML = te.conclusoes.map(c => `<div class="concl"><div class="cn">${esc(c.numero)}</div><div class="ct">${esc(c.titulo)}</div><div class="cx">${esc(c.texto)}</div></div>`).join("");
+  const meses = [...new Set(te.serie.map(r => r.mes))].sort();
+  const val = (c, m) => { const r = te.serie.find(x => x.cenario === c && x.mes === m); return r && r[S.lt] != null ? (S.lt === "pag_por_mil" ? r[S.lt] : r[S.lt] * 100) : null; };
+  const cen = [["regua", "Sem modelo (régua)", css("--t2"), [5, 4]], ["congelado", "Modelo congelado", css("--warn"), []], ["mensal", "Retreino mensal (produção)", corFx("Diamante"), []]];
+  const fmt = v => S.lt === "pag_por_mil" ? f1.format(v) : f1.format(v) + "%";
+  mk("chLt", {type: "line", data: {labels: meses.map(m => mesAno(m + "-01")), datasets: cen.map(([c, n, cor, dash]) => ({label: n, data: meses.map(m => val(c, m)),
+      borderColor: cor, backgroundColor: cor, borderDash: dash, borderWidth: c === "mensal" ? 3 : 2, pointRadius: 3}))},
+    options: {interaction: {mode: "index", intersect: false}, plugins: {legend: leg, tooltip: {callbacks: {label: c => `${c.dataset.label}: ${fmt(c.parsed.y)}`}}},
+      scales: {y: {ticks: {callback: v => S.lt === "pag_por_mil" ? fI.format(v) : v + "%"}}}},
+    plugins: [pluginEtapas(meses)]});
+}
 
 /* ======================= controles ======================= */
-function render() { if (S.aba === "oper") renderOper(); else renderQual(); }
+function render() { if (S.aba === "oper") renderOper(); else if (S.aba === "tempo") renderTempoExec(); else renderQual(); }
 function opcoesDias(sel, valor) { sel.innerHTML = DIAS.map((d, i) => `<option value="${i}">${dBRY(d)}</option>`).join(""); sel.value = valor; }
 function aplicarModo(m) {
   S.modo = m; QS("#segModo [data-modo]").forEach(b => b.classList.toggle("on", b.dataset.modo === m));
@@ -843,7 +992,7 @@ function aplicarTema(t) {
 }
 function aplicarAba(a) {
   S.aba = a; QS("[data-aba]").forEach(b => { b.classList.toggle("on", b.dataset.aba === a); b.setAttribute("aria-selected", b.dataset.aba === a); });
-  $("v-oper").classList.toggle("oculto", a !== "oper"); $("v-qual").classList.toggle("oculto", a !== "qual");
+  $("v-oper").classList.toggle("oculto", a !== "oper"); $("v-qual").classList.toggle("oculto", a !== "qual"); $("v-tempo").classList.toggle("oculto", a !== "tempo");
   destruir(); render();
 }
 function seg(id, attr, fn) { QS(`#${id} [data-${attr}]`).forEach(b => b.onclick = () => {
@@ -891,7 +1040,12 @@ function iniciar() {
   seg("segVer", "ver", v => { S.ver = v; renderBt(); });
   seg("segAucM", "am", v => { S.am = v; renderTempo(); });
   aplicarModo("per");
-  aplicarAba(/qualidade/.test(location.search + location.hash) ? "qual" : "oper");
+  seg("segLt", "lt", v => { S.lt = v; renderTempoExec(); });
+  $("lacBanner").onclick = () => $("lacBanner").classList.toggle("on");
+  $("lacBanner").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("lacBanner").classList.toggle("on"); } };
+  mostrar("tabTempo", !!DADOS.tempo_exec);
+  const qs = location.search + location.hash;
+  aplicarAba(/qualidade/.test(qs) ? "qual" : /aba=tempo/.test(qs) && DADOS.tempo_exec ? "tempo" : "oper");
 }
 iniciar();
 </script>

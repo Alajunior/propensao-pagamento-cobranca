@@ -38,6 +38,10 @@ def cenarios_mensais(esc_mensal: pd.DataFrame, esc_congelado: pd.DataFrame, capa
     return pd.DataFrame(linhas)
 
 
+def _pts(x: float) -> str:
+    return "ponto" if abs(x) < 2 else "pontos"
+
+
 def _pp(x: float, c: int = 1) -> str:
     return f"{x:.{c}f}".replace(".", ",")
 
@@ -53,7 +57,7 @@ def conclusoes(df: pd.DataFrame, calib_ece_depois: float, diamante_pct_estoque: 
     if perda >= 1:
         t_ret = f"Sem retreino, o modelo perde {_pp(perda)} pontos depois de jun/2026"
     else:
-        t_ret = f"Sem retreino, a perda depois de jun/2026 foi de só {_pp(perda)} ponto(s): a logística é estável"
+        t_ret = f"Sem retreino, a perda depois de jun/2026 foi de só {_pp(perda)} {_pts(perda)}: a logística é estável"
     return [
         {"titulo": f"Com {cap}% do estoque, o modelo alcança {_pp(media['mensal'] * 100, 0)}% dos pagadores",
          "texto": f"Sem modelo (régua de contato recente e menor atraso), a mesma capacidade alcança "

@@ -25,6 +25,10 @@ FRACOES = (0.10, 0.25, 0.50, 0.75, 1.00)
 MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 
 
+def _pts(x: float) -> str:
+    return "ponto" if abs(x) < 2 else "pontos"
+
+
 def _f(x, c=3):
     return f"{x:.{c}f}".replace(".", ",").replace("-", "−")
 
@@ -67,7 +71,7 @@ def _aleatorio_vs_cliente(tr: pd.DataFrame, seed: int) -> dict:
     veredito = "ok" if g < 0.005 else "atencao" if g <= 0.02 else "falhou"
     return {"id": "aleatorio_vs_cliente", "titulo": "Validação aleatória × separada por cliente",
             "veredito": veredito,
-            "resultado": (f"o sorteio aleatório superestima a AUC em até {_f(g * 100, 1)} ponto(s) "
+            "resultado": (f"o sorteio aleatório superestima a AUC em até {_f(g * 100, 1)} {_pts(g * 100)} "
                           f"(logística {_f(det['logistica']['gap'] * 100, 1)}, LightGBM {_f(det['lightgbm']['gap'] * 100, 1)})"),
             "detalhe": det}
 
@@ -100,7 +104,7 @@ def rodar_bateria(tabelas: dict, janela_fim="2026-05-31", n_boot: int = 1000, se
     gap = auc_tr - auc_te
     testes.append({"id": "gap_treino_teste", "titulo": "Treino × fora do tempo (o modelo decorou?)",
                    "veredito": "ok" if gap < 0.03 else "atencao" if gap <= 0.05 else "falhou",
-                   "resultado": f"AUC {_f(auc_tr)} no treino e {_f(auc_te)} em {_mes(teste_d)} (diferença {_f(gap * 100, 1)} ponto(s))",
+                   "resultado": f"AUC {_f(auc_tr)} no treino e {_f(auc_te)} em {_mes(teste_d)} (diferença {_f(gap * 100, 1)} {_pts(gap * 100)})",
                    "detalhe": {**janela, "auc_treino": auc_tr, "auc_teste": auc_te, "gap": gap}})
 
     # curva de aprendizado
@@ -113,7 +117,7 @@ def rodar_bateria(tabelas: dict, janela_fim="2026-05-31", n_boot: int = 1000, se
     ganho = curva[-1]["auc"] - curva[2]["auc"]
     testes.append({"id": "curva_aprendizado", "titulo": "Curva de aprendizado (mais dados ajudariam?)",
                    "veredito": "ok" if ganho < 0.005 else "atencao",
-                   "resultado": (f"de 50% para 100% do treino a AUC muda {_f(ganho * 100, 1)} ponto(s): "
+                   "resultado": (f"de 50% para 100% do treino a AUC muda {_f(ganho * 100, 1)} {_pts(ganho * 100)}: "
                                  + ("platô, mais linhas não ajudam" if ganho < 0.005 else "ainda melhora com mais dados")),
                    "detalhe": {"curva": curva, "ganho_50_100": ganho}})
 

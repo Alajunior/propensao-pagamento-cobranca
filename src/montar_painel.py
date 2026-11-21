@@ -20,7 +20,7 @@ from src.calibracao import brier, ece, previu_pagou
 from src.escoragem import HOJE, INICIO, _elegiveis, boletos, escorar_periodo, treinar_vigente
 from src.linha_tempo import cenarios_mensais, conclusoes
 from src.producao import NOMES_CODIGO, escorar_dia_guardado, salvar_modelo
-from src.sinal import contribuicoes, importancia, medir_sinal, motivos, perfil_tipico, referencia
+from src.sinal import contribuicoes, direcoes, importancia, medir_sinal, motivos, perfil_tipico, referencia
 from src.faixas import FAIXAS_ATRASO
 from src.qualidade import ORDEM, TODAS, backtest_producao, estabilidade_semanal, inversoes, lift_por_fase
 from src.valor import comparar_filas, curva_concentracao, curva_realizada, top_concentra
@@ -174,7 +174,8 @@ def _motivos_fila(fila: dict, tabelas, bases) -> dict:
         ids = {r[0] for linhas in por_fase.values() for r in linhas}
         base = montar_base(D, tabelas)
         base = base[base["id_contrato"].isin(ids)].set_index("id_contrato")
-        mot = dict(zip(base.index, motivos(contribuicoes(vig.modelo, base[X], refs[vig.safra_calib]))))
+        ref = refs[vig.safra_calib]
+        mot = dict(zip(base.index, motivos(contribuicoes(vig.modelo, base[X], ref), direcoes(vig.modelo, base[X], ref))))
         for linhas in por_fase.values():
             for r in linhas:
                 r.append(mot.get(r[0], []))

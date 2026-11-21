@@ -22,8 +22,19 @@ NOMES = {"dias_atraso": "dias de atraso", "valor_divida": "valor da dívida", "i
          "renda_estimada": "renda estimada", "qtd_acion_total": "acionamentos no total",
          "qtd_acion_30d": "acionamentos em 30 dias", "qtd_cpc_total": "contatos certos no total",
          "qtd_cpc_30d": "contato certo em 30 dias", "qtd_promessa_total": "promessas de pagamento",
-         "dias_desde_ult_cpc": "dias desde o último contato certo", "tem_acordo_antes": "já tem acordo",
+         "dias_desde_ult_cpc": "dias sem contato certo", "tem_acordo_antes": "já tem acordo",
          "qtd_contratos_cliente": "contratos do cliente", "produto": "produto", "uf": "UF"}
+# (abaixo da média, acima da média): o motivo diz o lado em que o contrato está, não só a variável
+FRASES = {"dias_atraso": ("atraso menor", "atraso maior"), "valor_divida": ("dívida menor", "dívida maior"),
+          "idade": ("mais jovem", "mais velho"), "renda_estimada": ("renda menor", "renda maior"),
+          "qtd_acion_total": ("menos acionamentos", "mais acionamentos"),
+          "qtd_acion_30d": ("menos acionamentos em 30 dias", "mais acionamentos em 30 dias"),
+          "qtd_cpc_total": ("menos contatos certos", "mais contatos certos"),
+          "qtd_cpc_30d": ("sem contato certo recente", "contato certo recente"),
+          "qtd_promessa_total": ("menos promessas", "fez promessas de pagamento"),
+          "dias_desde_ult_cpc": ("contato certo recente", "contato certo antigo"),
+          "tem_acordo_antes": ("sem acordo", "já tem acordo"),
+          "qtd_contratos_cliente": ("menos contratos", "mais contratos")}
 PERFIL = ("dias_atraso", "valor_divida", "idade", "renda_estimada", "qtd_acion_30d", "qtd_cpc_30d",
           "dias_desde_ult_cpc", "tem_acordo_antes")
 
@@ -52,12 +63,28 @@ def contribuicoes(modelo, X_df: pd.DataFrame, ref: pd.Series) -> pd.DataFrame:
     return c.T.groupby(c.columns.map(_original)).sum().T
 
 
-def motivos(contrib: pd.DataFrame, k: int = 2) -> list[list[str]]:
-    """As k variáveis que MAIS empurraram a chance para cima (só contribuições positivas)."""
+def direcoes(modelo, X_df: pd.DataFrame, ref: pd.Series) -> pd.DataFrame:
+    """+1 se o valor (transformado) do contrato está acima do contrato médio do treino, −1 se abaixo; só numéricas."""
+    z = _z(modelo, X_df)
+    cols = [f"num__{v}" for v in NUM]
+    d = (z[cols] - ref[cols]).ge(0).astype(int) * 2 - 1
+    d.columns = NUM
+    return d
+
+
+def motivos(contrib: pd.DataFrame, direc: pd.DataFrame | None = None, k: int = 2) -> list[list[str]]:
+    """As k variáveis que MAIS empurraram a chance para cima (só contribuições positivas). Com `direc`, a frase diz o
+    lado ("atraso menor", "já tem acordo"); sem ela, só o nome da variável."""
     out = []
-    for _, linha in contrib.iterrows():
+    for i, (_, linha) in enumerate(contrib.iterrows()):
         pos = linha[linha > 0].sort_values(ascending=False).head(k)
-        out.append([NOMES.get(v, v) for v in pos.index])
+        frases = []
+        for v in pos.index:
+            if direc is not None and v in FRASES and v in direc.columns:
+                frases.append(FRASES[v][0 if direc.iloc[i][v] < 0 else 1])
+            else:
+                frases.append(NOMES.get(v, v))
+        out.append(frases)
     return out
 
 
