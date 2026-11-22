@@ -23,7 +23,8 @@ NOMES = {"dias_atraso": "dias de atraso", "valor_divida": "valor da dívida", "i
          "qtd_acion_30d": "acionamentos em 30 dias", "qtd_cpc_total": "contatos certos no total",
          "qtd_cpc_30d": "contato certo em 30 dias", "qtd_promessa_total": "promessas de pagamento",
          "dias_desde_ult_cpc": "dias sem contato certo", "tem_acordo_antes": "já tem acordo",
-         "qtd_contratos_cliente": "contratos do cliente", "produto": "produto", "uf": "UF"}
+         "qtd_contratos_cliente": "contratos do cliente", "produto": "produto", "uf": "UF",
+         "dias_desde_ult_cpc_nulo": "nunca teve contato certo", "renda_estimada_nulo": "renda não informada"}
 # (abaixo da média, acima da média): o motivo diz o lado em que o contrato está, não só a variável
 FRASES = {"dias_atraso": ("atraso menor", "atraso maior"), "valor_divida": ("dívida menor", "dívida maior"),
           "idade": ("mais jovem", "mais velho"), "renda_estimada": ("renda menor", "renda maior"),
@@ -34,13 +35,19 @@ FRASES = {"dias_atraso": ("atraso menor", "atraso maior"), "valor_divida": ("dí
           "qtd_promessa_total": ("menos promessas", "fez promessas de pagamento"),
           "dias_desde_ult_cpc": ("contato certo recente", "contato certo antigo"),
           "tem_acordo_antes": ("sem acordo", "já tem acordo"),
-          "qtd_contratos_cliente": ("menos contratos", "mais contratos")}
+          "qtd_contratos_cliente": ("menos contratos", "mais contratos"),
+          "dias_desde_ult_cpc_nulo": ("já teve contato certo", "nunca teve contato certo"),
+          "renda_estimada_nulo": ("renda informada", "renda não informada")}
 PERFIL = ("dias_atraso", "valor_divida", "idade", "renda_estimada", "qtd_acion_30d", "qtd_cpc_30d",
           "dias_desde_ult_cpc", "tem_acordo_antes")
 
 
 def _original(col: str) -> str:
-    nome = col.split("__", 1)[-1].replace("missingindicator_", "")
+    """Coluna transformada → variável original. A flag de nulo é variável PRÓPRIA (x_nulo): somada ao valor, ela
+    trocava o sinal (o contrato com contato antigo ganhava o bônus de "já teve contato" e o motivo saía "antigo")."""
+    nome = col.split("__", 1)[-1]
+    if nome.startswith("missingindicator_"):
+        return nome.replace("missingindicator_", "") + "_nulo"
     for cat in ("produto", "uf"):
         if nome.startswith(cat + "_"):
             return cat
@@ -66,9 +73,9 @@ def contribuicoes(modelo, X_df: pd.DataFrame, ref: pd.Series) -> pd.DataFrame:
 def direcoes(modelo, X_df: pd.DataFrame, ref: pd.Series) -> pd.DataFrame:
     """+1 se o valor (transformado) do contrato está acima do contrato médio do treino, −1 se abaixo; só numéricas."""
     z = _z(modelo, X_df)
-    cols = [f"num__{v}" for v in NUM]
+    cols = [c for c in z.columns if c.startswith("num__")]
     d = (z[cols] - ref[cols]).ge(0).astype(int) * 2 - 1
-    d.columns = NUM
+    d.columns = [_original(c) for c in cols]
     return d
 
 
@@ -77,13 +84,16 @@ def motivos(contrib: pd.DataFrame, direc: pd.DataFrame | None = None, k: int = 2
     lado ("atraso menor", "já tem acordo"); sem ela, só o nome da variável."""
     out = []
     for i, (_, linha) in enumerate(contrib.iterrows()):
-        pos = linha[linha > 0].sort_values(ascending=False).head(k)
         frases = []
-        for v in pos.index:
+        for v in linha[linha > 0].sort_values(ascending=False).index:
             if direc is not None and v in FRASES and v in direc.columns:
-                frases.append(FRASES[v][0 if direc.iloc[i][v] < 0 else 1])
+                frase = FRASES[v][0 if direc.iloc[i][v] < 0 else 1]
             else:
-                frases.append(NOMES.get(v, v))
+                frase = NOMES.get(v, v)
+            if frase not in frases:          # "contato certo recente" pode vir de duas variáveis: aparece uma vez
+                frases.append(frase)
+            if len(frases) == k:
+                break
         out.append(frases)
     return out
 

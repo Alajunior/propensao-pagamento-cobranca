@@ -17,7 +17,7 @@ def test_contribuicoes_fecham_o_logodds(pasta_pequena):
     lr = m[-1]
     zref = ref.to_numpy() @ lr.coef_[0] + lr.intercept_[0]
     assert np.allclose(c.sum(axis=1).to_numpy() + zref, m.decision_function(b[X].head(50)), atol=1e-6)
-    assert set(c.columns) <= set(NUM) | {"produto", "uf"}
+    assert set(c.columns) <= set(NUM) | {"produto", "uf", "dias_desde_ult_cpc_nulo", "renda_estimada_nulo"}
     imp = importancia(c)
     assert list(imp.columns) == ["variavel", "nome", "media_abs"] and imp.media_abs.is_monotonic_decreasing
 
@@ -62,4 +62,25 @@ def test_motivo_diz_a_direcao(pasta_pequena):
     t = carregar(pasta_pequena); b = montar_base("2026-08-31", t)
     m = criar_modelos()["logistica"].fit(b[X], b[ALVO])
     dd = direcoes(m, b[X].head(20), referencia(m, b[X]))
-    assert set(dd.columns) == set(NUM) and set(np.unique(dd.to_numpy())) <= {-1, 1}
+    assert set(NUM) <= set(dd.columns) and set(np.unique(dd.to_numpy())) <= {-1, 1}
+
+
+def test_flag_de_nulo_e_variavel_propria_e_motivo_nao_mente(pasta_pequena):
+    t = carregar(pasta_pequena); b = montar_base("2026-08-31", t)
+    m = criar_modelos()["logistica"].fit(b[X], b[ALVO])
+    ref = referencia(m, b[X]); amostra = b[X]
+    c = contribuicoes(m, amostra, ref)
+    assert "dias_desde_ult_cpc_nulo" in c.columns
+    from src.sinal import FRASES, direcoes
+    mot = motivos(c, direcoes(m, amostra, ref))
+    coef = dict(zip(m[:-1].get_feature_names_out(), m[-1].coef_[0]))
+    lado_ruim = FRASES["dias_desde_ult_cpc"][1 if coef["num__dias_desde_ult_cpc"] < 0 else 0]
+    assert not any(lado_ruim in ms for ms in mot)                    # o lado que BAIXA a chance nunca vira motivo
+    assert all(len(ms) == len(set(ms)) for ms in mot)                 # sem frase repetida na mesma linha
+
+
+def test_motivos_sem_frase_repetida():
+    from src.sinal import FRASES
+    c = pd.DataFrame({"qtd_cpc_30d": [0.9], "dias_desde_ult_cpc": [0.5], "idade": [0.2]})
+    d = pd.DataFrame({"qtd_cpc_30d": [1], "dias_desde_ult_cpc": [-1], "idade": [1]})
+    assert motivos(c, d) == [[FRASES["qtd_cpc_30d"][1], FRASES["idade"][1]]]   # "contato certo recente" uma vez só

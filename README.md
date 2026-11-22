@@ -161,7 +161,7 @@ Janela de treino de mar a mai/2026, teste em jun/2026 (o primeiro mês da relaç
 
 | Teste | Resultado | Veredito |
 |---|---|---|
-| Fora do tempo, safra a safra | AUC média 0,832 em 14 safras; a pior, 0,813 (out/25) | ok |
+| Fora do tempo, safra a safra | AUC média 0,832 em 13 safras maduras; a pior, 0,813 (out/25) | ok |
 | Validação aleatória × separada por cliente | o sorteio aleatório superestima a AUC em 0,7 ponto no LightGBM e 0,1 na logística | atenção |
 | Alvo embaralhado | AUC 0,496 com o alvo sorteado (esperado 0,48 a 0,52) | ok |
 | Treino × fora do tempo | 0,833 no treino e 0,857 em jun/2026: não decorou | ok |
@@ -170,7 +170,7 @@ Janela de treino de mar a mai/2026, teste em jun/2026 (o primeiro mês da relaç
 
 - **O vazamento:** as safras empilhadas repetem o mesmo contrato, e o mesmo cliente, mês a mês. Sorteando a validação ao acaso, o mesmo cliente cai no treino e na validação.
   - O LightGBM decora o cliente e a validação sai 0,7 ponto otimista; a logística quase não se beneficia (0,1).
-- **A correção:** a validação interna (`_treinar`) passou a separar 70/30 **por cliente**. A AUC de validação do LightGBM congelado caiu de 0,815 para 0,810; a da logística não mudou (0,814).
+- **A correção:** a validação interna (`_treinar`) passou a separar 70/30 **por cliente**. A AUC de validação do LightGBM congelado caiu de 0,815 para 0,810; a da logística praticamente não mudou (0,814 → 0,815).
 - **Os dois "atenção" não são falhas.** O primeiro é o vazamento, já corrigido. O segundo diz que a AUC de um mês varia ±1 ponto só pelo acaso, e isso é o motivo de o gate exigir intervalo de confiança.
 
 ### 8. Por que o modelo decide: o Diamante é quem já tem acordo
@@ -178,7 +178,7 @@ Janela de treino de mar a mai/2026, teste em jun/2026 (o primeiro mês da relaç
 - **Medir o sinal antes de modelar:** sozinhas, "já tem acordo" (AUC 0,751) e "promessas de pagamento" (0,749) são as variáveis mais fortes.
   - Cada uma põe cerca de 73% dos pagadores nos seus 40% do topo, contra 40% do acaso.
   - O modelo inteiro põe 85%.
-- **Na logística vigente, os maiores pesos** são os dias de atraso, "já tem acordo" e os dias sem contato certo.
+- **Na logística vigente, os maiores pesos** são os dias de atraso, "já tem acordo" e "nunca teve contato certo". A flag de nulo é variável própria: somada aos dias sem contato, ela invertia o sentido do motivo.
 - **A explicação é exata, sem SHAP:** na logística, log-odds = intercepto + Σ coeficiente × variável. Medida contra o contrato médio do treino, a contribuição de cada variável fecha o log-odds até a 6ª casa, e há teste para isso.
 - **Os motivos de cada contrato** dizem o lado: "já tem acordo", "atraso menor", "contato certo recente". A operação lê o porquê em vez de um número.
 - **Perfil típico:** 94% do Diamante já tem acordo, contra 0% do Bronze. O Diamante tem 18 dias medianos desde o último contato certo; o Bronze, 59.

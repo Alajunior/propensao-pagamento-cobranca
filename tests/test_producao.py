@@ -52,3 +52,9 @@ def test_hash_divergente_e_dia_passado(ctx):
     (ctx.mod / "modelo.pkl").write_bytes(b"adulterado")
     r = escorar_dia_guardado("2026-11-19", ctx.t, ctx.mod, ctx.out)
     assert r["codigo"] == HASH_DIVERGENTE and r["sha_ok"] is False
+
+
+def test_sem_manifest_e_codigo_5(ctx):
+    (ctx.mod / "manifest.json").unlink()
+    r = escorar_dia_guardado("2026-11-16", ctx.t, ctx.mod, ctx.out)
+    assert r["codigo"] == HASH_DIVERGENTE and r["sha_ok"] is False

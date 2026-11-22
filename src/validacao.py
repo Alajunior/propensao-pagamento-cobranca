@@ -18,7 +18,8 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import GroupKFold, KFold, cross_val_score
 
 from src.backtest import X, rodar_backtest
-from src.base_analitica import ALVO, montar_base, safras
+from src.base_analitica import ALVO, JANELA_ALVO, montar_base, safras
+from src.escoragem import HOJE
 from src.modelos import criar_modelos
 
 FRACOES = (0.10, 0.25, 0.50, 0.75, 1.00)
@@ -48,7 +49,10 @@ def _walk_forward(tabelas, relatorios: Path) -> dict:
         bt = pd.read_csv(arq, parse_dates=["safra_teste"])
     else:
         bt = rodar_backtest(tabelas, modelos={"logistica": criar_modelos()["logistica"]})
-    x = bt[(bt["modelo"] == "logistica") & (bt["modo"] == "mensal")].dropna(subset=["AUC"])
+    bt["safra_teste"] = pd.to_datetime(bt["safra_teste"])
+    # safra cujo alvo (d, d+30] ainda não fechou em HOJE fica de fora (o painel não conhece esse futuro)
+    x = bt[(bt["modelo"] == "logistica") & (bt["modo"] == "mensal")
+           & (bt["safra_teste"] + pd.Timedelta(days=JANELA_ALVO) <= HOJE)].dropna(subset=["AUC"])
     media, pior = float(x["AUC"].mean()), float(x["AUC"].min())
     mes_pior = x.loc[x["AUC"].idxmin(), "safra_teste"]
     return {"id": "walk_forward", "titulo": "Validação fora do tempo, safra a safra",

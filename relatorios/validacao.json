@@ -4,11 +4,11 @@
       "id": "walk_forward",
       "titulo": "Validação fora do tempo, safra a safra",
       "veredito": "ok",
-      "resultado": "AUC média 0,832 em 14 safras; a pior foi 0,813 (out/25)",
+      "resultado": "AUC média 0,832 em 13 safras; a pior foi 0,813 (out/25)",
       "detalhe": {
-        "media": 0.8323116067897117,
+        "media": 0.832198768189226,
         "pior": 0.8134841365926677,
-        "safras": 14
+        "safras": 13
       }
     },
     {

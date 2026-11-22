@@ -43,12 +43,17 @@ def salvar_modelo(vig: Vigente, pasta) -> dict:
 
 
 def carregar_modelo(pasta) -> tuple[Vigente | None, int]:
+    """Os bytes são lidos UMA vez: o hash é conferido nesses bytes e só eles vão para o pickle (sem janela para troca).
+    Com o manifest ao lado do modelo, o hash detecta arquivo trocado ou corrompido, não adulteração deliberada."""
     pasta = Path(pasta)
-    manifest = json.loads((pasta / "manifest.json").read_text(encoding="utf-8"))
-    if _sha(pasta / "modelo.pkl") != manifest["sha256"]:
+    try:
+        esperado = json.loads((pasta / "manifest.json").read_text(encoding="utf-8"))["sha256"]
+        dados = (pasta / "modelo.pkl").read_bytes()
+    except (OSError, ValueError, KeyError):
         return None, HASH_DIVERGENTE
-    # o pickle só é aberto DEPOIS de o hash bater com o manifest (arquivo que não é o publicado nunca é carregado)
-    return pickle.loads((pasta / "modelo.pkl").read_bytes()), OK
+    if hashlib.sha256(dados).hexdigest() != esperado:
+        return None, HASH_DIVERGENTE
+    return pickle.loads(dados), OK
 
 
 def _publicados(saida: Path) -> dict[pd.Timestamp, Path]:
