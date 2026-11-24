@@ -32,19 +32,25 @@ jobs:
       - uses: actions/checkout@v7
       - run: docker build -t propensao-pagamento .
 
-  publicar:
+  empacotar:
     # publica o docs/ versionado (gerado localmente com a base de 100 mil clientes): os números do README batem com o painel
     if: github.ref == 'refs/heads/main'
     needs: testes
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs
+
+  publicar:
+    # job separado do envio: o artefato já está registrado quando o deploy o procura, e rodar só este job de novo não duplica o artefato
+    needs: empacotar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v5
