@@ -1,5 +1,13 @@
 # Propensão a pagamento em cobrança
 
+[![CI](https://github.com/Alajunior/propensao-pagamento-cobranca/actions/workflows/ci.yml/badge.svg)](https://github.com/Alajunior/propensao-pagamento-cobranca/actions/workflows/ci.yml) ![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white) [![Painel ao vivo](https://img.shields.io/badge/painel-ao%20vivo-2ea44f)](https://alajunior.github.io/propensao-pagamento-cobranca/) ![Dados 100% sintéticos](https://img.shields.io/badge/dados-100%25%20sint%C3%A9ticos-6e7781)
+
+> **Em 30 segundos**
+>
+> - **Problema:** a operação não consegue acionar todos os contratos em atraso; precisa saber quem tem mais chance de pagar nos próximos 30 dias e quanto isso vale.
+> - **Como:** logística com calibração isotônica por fase, fila de trabalho por valor esperado, backtest fora do tempo com PSI e escoragem diária com travas de produção.
+> - **Resultado:** a calibração leva a chance média prevista de 34,4% para 4,14% (a real é 4,15%). Com 10% de capacidade, a fila por valor captura 58,8% do R$ pago, contra 38,0% da fila por chance.
+
 Modelo que ordena os contratos de uma carteira de cobrança pela chance de pagar nos próximos 30 dias, e o **painel em que a operação usa esse modelo todo dia**:
 - funil por faixa;
 - fila de trabalho por **valor esperado**;
